@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Register | RSIC 2026</title>
+    <meta
+      name="description"
+      content="Register your school's delegation for RSIC: 5 to 7 delegates across 5 to 8 realms. Registration opens 1 October."
+    />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<meta name="theme-color" content="#040b1a">
+<meta property="og:title" content="Register | RSIC 2026">
+<meta property="og:description" content="Register your school's delegation for RSIC: 5 to 7 delegates across 5 to 8 realms. Registration opens 1 October.">
+<meta property="og:image" content="https://cityrsic.com/assets/share-card.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-head">
+      <div class="site-head-inner">
+        <a class="logo" href="/" aria-label="RSIC home"
+          ><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false">
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14" />
+              <path
+                d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"
+              />
+              <path d="M72 6v30" />
+              <path d="M111.49 11.36a15 15 0 1 0 0 19.28" />
+            </g>
+            <circle class="dot" cx="123" cy="33" r="3.6" /></svg
+        ></a>
+        <button
+          class="menu-btn"
+          type="button"
+          aria-expanded="false"
+          aria-controls="site-nav"
+        >
+          Menu
+        </button>
+        <nav class="site-nav" id="site-nav" aria-label="Main">
+          <a href="/about">About</a>
+          <a href="/realms">Realms</a>
+          <a href="/experience">Experience</a>
+          <a href="/team">Team</a>
+          <a href="/conduct">Conduct</a>
+          <a href="/updates">Updates</a>
+          <a href="/media">Media</a>
+          <a class="nav-cta" href="/register" aria-current="page"
+            >Register</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="page-head">
+        <div>
+          <p class="label">08 Your move</p>
+          <h1 class="page-title" data-cms="heading.register.1">Ready to enter <em>the universe?</em></h1>
+        </div>
+        <p class="lede" data-cms="lede.register.1">One form, one route. Register your delegation.</p>
+      </section>
+      <section class="reg">
+        <div class="reg-panel">
+          <form id="registrationForm" novalidate>
+            <input type="hidden" name="route" value="school" />
+            <fieldset class="reg-field active">
+              <legend class="reg-legend">Your delegation</legend>
+              <div class="field">
+                <label for="s-school">School / institution name</label>
+                <input id="s-school" name="school" type="text" autocomplete="organization" required />
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="s-contact">Contact person</label>
+                  <input id="s-contact" name="contact_name" type="text" autocomplete="name" required />
+                </div>
+                <div class="field">
+                  <label for="s-email">Contact email</label>
+                  <input id="s-email" name="contact_email" type="email" autocomplete="email" required />
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="s-phone">Contact phone</label>
+                  <input id="s-phone" name="phone" type="tel" autocomplete="tel" />
+                </div>
+                <div class="field">
+                  <label for="s-delegates">Number of delegates</label>
+                  <input id="s-delegates" name="delegates" type="number" inputmode="numeric" min="5" max="7" required />
+                  <p class="field-hint" id="delegatesHint">5 to 7 delegates.</p>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="reg-field active reg-people" id="peopleField" hidden>
+              <legend class="reg-legend">Your delegates</legend>
+              <p class="field-hint" id="peopleHint">
+                Name, age and class for each delegate. Set the number above and
+                the rows appear here.
+              </p>
+              <div class="people-list" id="peopleList"></div>
+            </fieldset>
+
+            <fieldset class="reg-field active reg-realms">
+              <legend class="reg-legend">Realms</legend>
+              <p class="field-hint" id="realmsNote" data-cms="registration.realms_note">Project Nexus and Gaia's Exchange are compulsory for every delegation. Pick the rest yourself.</p>
+
+              <p class="realm-pick-head">Compulsory</p>
+              <div class="realm-picker">
+                <label class="realm-pick is-locked">
+                  <input type="checkbox" name="realms" value="pure" checked disabled data-locked="yes" />
+                  <span><b data-cms="realm.pure.name">Project Nexus</b><small>Pure Sciences</small></span>
+                </label>
+                <label class="realm-pick is-locked">
+                  <input type="checkbox" name="realms" value="business" checked disabled data-locked="yes" />
+                  <span><b data-cms="realm.business.name">Gaia's Exchange</b><small>Environmental Business</small></span>
+                </label>
+              </div>
+
+              <p class="realm-pick-head">Choose the rest</p>
+              <div class="realm-picker">
+                <label class="realm-pick">
+                  <input type="checkbox" name="realms" value="math" />
+                  <span><b data-cms="realm.math.name">The Cartesian Realm</b><small>Mathematics</small></span>
+                </label>
+                <label class="realm-pick">
+                  <input type="checkbox" name="realms" value="bio" />
+                  <span><b data-cms="realm.bio.name">The Watson Street</b><small>Biology</small></span>
+                </label>
+                <label class="realm-pick">
+                  <input type="checkbox" name="realms" value="chem" />
+                  <span><b data-cms="realm.chem.name">Curie's Chamber</b><small>Chemistry</small></span>
+                </label>
+                <label class="realm-pick">
+                  <input type="checkbox" name="realms" value="physics" />
+                  <span><b data-cms="realm.physics.name">Astral Axiom</b><small>Physics</small></span>
+                </label>
+                <label class="realm-pick">
+                  <input type="checkbox" name="realms" value="cs" />
+                  <span><b data-cms="realm.cs.name">Hypatia's Enclave</b><small>Computer Science</small></span>
+                </label>
+                <label class="realm-pick">
+                  <input type="checkbox" name="realms" value="psych" />
+                  <span><b data-cms="realm.psych.name">Pterion's Sanctum</b><small>Psychology</small></span>
+                </label>
+                <label class="realm-pick">
+                  <input type="checkbox" name="realms" value="film" />
+                  <span><b data-cms="realm.film.name">The Joker's Act</b><small>Film &amp; Drama</small></span>
+                </label>
+                <label class="realm-pick">
+                  <input type="checkbox" name="realms" value="law" />
+                  <span><b data-cms="realm.law.name">Athena's Bench</b><small>Law &amp; Sociology</small></span>
+                </label>
+                <label class="realm-pick">
+                  <input type="checkbox" name="realms" value="robotics" />
+                  <span><b data-cms="realm.robotics.name">Theseus' Circuit</b><small>Robotics</small></span>
+                </label>
+              </div>
+
+              <p class="realm-tally" id="realmTally" role="status">2 of 8 realms chosen</p>
+            </fieldset>
+
+            <button class="btn" type="submit" disabled>Opens soon</button>
+            <p class="reg-status" id="regStatus" role="status"></p>
+          </form>
+          <p class="reg-note" id="regNote" data-cms="registration.closed_note">
+            Registration opens 1 October. Leave your details then and we'll
+            place you in your realm.
+          </p>
+        </div>
+        <aside class="reg-side">
+          <div class="info-card">
+            <small>When</small>
+            <p><b data-cms="event.dates">Friday 13 to Sunday 15 November 2026</b>, from <b data-cms="event.start_time">1:45 PM PKT</b></p>
+          </div>
+          <div class="info-card">
+            <small>Where</small>
+            <p data-cms="event.venue">TCS Ravi</p>
+          </div>
+          <div class="info-card">
+            <small>Entry fee</small>
+            <p>Early bird <b data-cms="fee.early_bird">PKR 2,500</b>. After that <b data-cms="fee.normal">PKR 3,000</b>. Delegation fee: <b data-cms="fee.delegation">Coming soon</b>.</p>
+          </div>
+          <div class="info-card">
+            <small>Registration</small>
+            <p>
+              Opens <b data-cms="event.registration_opens">1 October</b>. It'll be announced on the
+              <a href="/updates">Updates</a> page.
+            </p>
+          </div>
+          <div class="info-card">
+            <small>Who can enter</small>
+            <p data-cms="event.eligibility">O Levels (Grade 9) and above</p>
+          </div>
+          <div class="info-card">
+            <small>Questions</small>
+            <p><a class="text-link" href="mailto:raviscienceandinnovation@gmail.com" data-cms="contact.email">raviscienceandinnovation@gmail.com</a></p>
+          </div>
+          <div class="faq-item">
+            <h2>What do I bring?</h2>
+            <p>
+              Your delegate ID, plus whatever your realm lists under
+              Requirements on its page.
+            </p>
+          </div>
+          <div class="faq-item">
+            <h2>How long is it?</h2>
+            <p>
+              Three days, from Friday 13 to Sunday 15 November, starting at 1:45
+              PM PKT. Rounds run from a 10-minute slot in The Joker's Act to a
+              full day in Project Nexus or Athena's Bench.
+            </p>
+          </div>
+          <div class="faq-item">
+            <h2>Do I need a team?</h2>
+            <p>
+              Yes. RSIC is entered by delegations, not by individuals. Your school
+              sends 5 to 7 delegates who cover the realms you pick between
+              them.
+            </p>
+          </div>
+          <div class="faq-item">
+            <h2>How many realms do we enter?</h2>
+            <p>
+              Between 5 and 8. Project Nexus and Gaia's Exchange are compulsory,
+              and you choose the rest from the other
+              <a class="text-link" href="/realms">nine realms</a>.
+            </p>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="site-foot">
+      <div class="site-foot-inner">
+        <div>
+          <a class="logo" href="/" aria-label="RSIC home"
+            ><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false">
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14" />
+                <path
+                  d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"
+                />
+                <path d="M72 6v30" />
+                <path d="M111.49 11.36a15 15 0 1 0 0 19.28" />
+              </g>
+              <circle class="dot" cx="123" cy="33" r="3.6" /></svg
+          ></a>
+          <p>
+            RSIC 2026 runs from <b data-cms="event.dates">Friday 13 to Sunday 15 November</b>, starting at
+            <b data-cms="event.start_time">1:45 PM PKT</b>. Eleven realms, from maths and physics to moot court and
+            theatre.
+          </p>
+        </div>
+        <ul class="foot-links">
+          <li><a href="/about">About</a></li>
+          <li><a href="/realms">Realms</a></li>
+          <li><a href="/experience">Experience</a></li>
+          <li><a href="/team">Team</a></li>
+          <li><a href="/conduct">Conduct</a></li>
+          <li><a href="/updates">Updates</a></li>
+          <li><a href="/media">Media</a></li>
+          <li><a href="/register">Register</a></li>
+        </ul>
+        <ul class="foot-contact">
+<li><a href="https://www.instagram.com/rsic.ravi/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg><span data-cms="event.instagram_handle">rsic.ravi</span></a></li>
+<li><a href="mailto:raviscienceandinnovation@gmail.com"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M3 7.5l9 6 9-6"/></svg><span data-cms="contact.email">raviscienceandinnovation@gmail.com</span></a></li>
+</ul>
+<p class="foot-bottom">
+          Run by students. Registration opens closer to the event.
+        </p>
+      </div>
+    </footer>
+    <script src="/script.js"></script>
+  </body>
+</html>

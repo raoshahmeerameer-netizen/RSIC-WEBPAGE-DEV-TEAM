@@ -1,0 +1,1180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Admin Dashboard — RSIC 2026</title>
+    <meta
+      name="description"
+      content="Private dashboard for the RSIC team: registrations, the registration switch and the site's editable text."
+    />
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<meta name="theme-color" content="#040b1a">
+<meta property="og:title" content="Admin Dashboard — RSIC 2026">
+<meta property="og:description" content="Private dashboard for the RSIC team: registrations, the registration switch and the site's editable text.">
+<meta property="og:image" content="https://cityrsic.com/assets/share-card.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oswald:wght@500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+
+    <style>
+      .admin-wrap {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: clamp(24px, 3vw, 36px);
+      }
+      /* grid and flex children default to min-width:auto, which lets the wide
+         table push the whole page sideways on a phone. This keeps it inside. */
+      .admin-wrap > section,
+      .reg-switchboard > div {
+        min-width: 0;
+      }
+
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 12px;
+      }
+
+      .table-container {
+        max-width: 100%;
+        background: var(--surface);
+        border-radius: var(--r-md);
+        overflow-x: auto;
+        border: 1px solid var(--edge);
+        box-shadow: var(--lift);
+      }
+
+      .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font: 500 0.95rem/1.5 var(--sans);
+        min-width: 620px;
+      }
+
+      .admin-table th {
+        background: var(--surface-2);
+        color: var(--pink);
+        font-family: var(--sans);
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--edge-strong);
+        white-space: nowrap;
+      }
+
+      .admin-table td {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--edge);
+        color: var(--text);
+        vertical-align: top;
+      }
+
+      .admin-table tbody tr:hover {
+        background: var(--surface-2);
+      }
+
+      .row-sub {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--text-soft);
+        margin-top: 2px;
+      }
+
+      .status-badge {
+        display: inline-block;
+        font: 600 0.78rem/1 var(--sans);
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--edge-strong);
+        color: var(--text);
+        white-space: nowrap;
+      }
+      .status-badge.confirmed {
+        background: rgba(208, 118, 143, 0.15);
+        border-color: var(--pink);
+        color: var(--pink-light);
+      }
+      .status-badge.pending {
+        background: rgba(127, 176, 230, 0.15);
+        border-color: var(--blue);
+        color: var(--blue);
+      }
+
+      .action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--pink);
+        color: var(--on-pink);
+        padding: 9px 16px;
+        border-radius: 999px;
+        font: 600 0.88rem/1 var(--sans);
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+          background-color 0.25s ease,
+          transform 0.2s var(--ease);
+      }
+      .action-btn:hover {
+        background: var(--pink-light);
+      }
+      .action-btn:active {
+        transform: scale(0.95);
+      }
+      .action-btn.ghost {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--edge-strong);
+      }
+      .action-btn.ghost:hover {
+        background: var(--surface-2);
+        color: var(--text);
+      }
+      .action-btn.danger:hover {
+        background: #c2536c;
+        color: var(--on-pink);
+      }
+      .action-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .row-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .toolbar input[type="search"] {
+        flex: 1 1 240px;
+      }
+
+      /* the registration switch */
+      .reg-switchboard {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: center;
+        justify-content: space-between;
+        padding: clamp(20px, 3vw, 28px);
+        border-radius: var(--r-lg);
+        background: var(--surface);
+        border: 1px solid var(--edge);
+      }
+      .reg-switchboard h2 {
+        margin: 0 0 4px;
+        font-size: clamp(1.3rem, 2.4vw, 1.75rem);
+      }
+      .reg-switchboard p {
+        margin: 0;
+        color: var(--text-soft);
+        max-width: 52ch;
+      }
+      .switch-state {
+        font: 600 0.82rem/1 var(--sans);
+        padding: 7px 14px;
+        border-radius: 999px;
+        display: inline-block;
+        margin-bottom: 10px;
+      }
+      .switch-state.on {
+        background: rgba(143, 216, 168, 0.16);
+        color: #8fd8a8;
+        border: 1px solid #8fd8a8;
+      }
+      .switch-state.off {
+        background: rgba(127, 176, 230, 0.15);
+        color: var(--blue);
+        border: 1px solid var(--blue);
+      }
+
+      /* per-realm counts */
+      .realm-counts {
+        display: grid;
+        gap: 12px;
+      }
+      .realm-count-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 46px;
+        gap: 6px 12px;
+        align-items: center;
+      }
+      .realm-count-row span {
+        font: 500 0.92rem/1.4 var(--sans);
+      }
+      .realm-count-row b {
+        font: 500 1rem/1 var(--nums);
+        color: var(--pink);
+        text-align: right;
+      }
+      .realm-count-bar {
+        grid-column: 1 / -1;
+        height: 4px;
+        border-radius: 4px;
+        background: var(--edge);
+        overflow: hidden;
+      }
+      .realm-count-bar i {
+        display: block;
+        height: 100%;
+        background: var(--pink);
+        border-radius: 4px;
+      }
+
+      /* the content editor */
+      .cms-group {
+        border: 1px solid var(--edge);
+        border-radius: var(--r-md);
+        background: var(--surface);
+        margin-bottom: 12px;
+        overflow: hidden;
+      }
+      .cms-group > summary {
+        cursor: pointer;
+        padding: 16px 20px;
+        font: 600 1rem/1.3 var(--sans);
+        list-style: none;
+      }
+      .cms-group > summary::-webkit-details-marker {
+        display: none;
+      }
+      .cms-group > summary::before {
+        content: "+";
+        color: var(--pink);
+        margin-right: 10px;
+        font-family: var(--nums);
+      }
+      .cms-group[open] > summary::before {
+        content: "–";
+      }
+      .cms-fields {
+        display: grid;
+        gap: 14px;
+        padding: 4px 20px 20px;
+      }
+      .cms-field label {
+        display: block;
+        font: 600 0.84rem/1.3 var(--sans);
+        color: var(--text-soft);
+        margin-bottom: 6px;
+      }
+      .cms-field textarea {
+        min-height: 92px;
+        resize: vertical;
+      }
+      .cms-field.changed label {
+        color: var(--pink);
+      }
+      .cms-field.changed input,
+      .cms-field.changed textarea {
+        border-color: var(--pink);
+      }
+
+      .save-bar {
+        position: sticky;
+        bottom: 16px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 14px 18px;
+        border-radius: var(--r-md);
+        background: var(--surface-2);
+        border: 1px solid var(--edge-strong);
+        box-shadow: var(--lift);
+      }
+
+      .admin-msg {
+        font: 600 0.9rem/1.4 var(--sans);
+        min-height: 1.4em;
+      }
+      .admin-msg.good {
+        color: #8fd8a8;
+      }
+      .admin-msg.bad {
+        color: var(--pink-light);
+      }
+
+      /* details panel */
+      dialog.detail-modal {
+        border: 1px solid var(--edge-strong);
+        border-radius: var(--r-lg);
+        background: var(--surface);
+        color: var(--text);
+        padding: clamp(22px, 3vw, 32px);
+        max-width: 460px;
+        width: calc(100% - 32px);
+      }
+      dialog.detail-modal::backdrop {
+        background: rgba(2, 7, 18, 0.72);
+      }
+      .detail-modal dl {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 10px 18px;
+        margin: 18px 0 22px;
+        font: 500 0.95rem/1.5 var(--sans);
+      }
+      .detail-modal dt {
+        color: var(--text-soft);
+      }
+      .detail-modal dd {
+        margin: 0;
+        word-break: break-word;
+      }
+      .detail-people {
+        margin: 10px 0 22px;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 6px;
+        font: 500 0.92rem/1.5 var(--sans);
+        color: var(--text-soft);
+      }
+
+      /* the login gate */
+      .auth-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(2, 7, 18, 0.9);
+        backdrop-filter: blur(6px);
+      }
+      .auth-card {
+        width: 100%;
+        max-width: 380px;
+        background: var(--surface);
+        border: 1px solid var(--edge-strong);
+        border-radius: var(--r-lg);
+        padding: clamp(24px, 4vw, 34px);
+        box-shadow: var(--lift);
+      }
+      .auth-card h1 {
+        font-size: 1.6rem;
+        margin: 6px 0 18px;
+      }
+
+      @media (max-width: 720px) {
+        .reg-switchboard {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-head">
+      <div class="site-head-inner">
+        <a class="logo" href="/" aria-label="RSIC home"
+          ><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false">
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14" />
+              <path
+                d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"
+              />
+              <path d="M72 6v30" />
+              <path d="M111.49 11.36a15 15 0 1 0 0 19.28" />
+            </g>
+            <circle class="dot" cx="123" cy="33" r="3.6" /></svg
+        ></a>
+        <nav class="site-nav" aria-label="Main">
+          <a href="/">Back to site</a>
+          <button class="nav-cta" type="button" id="signOutBtn" hidden>
+            Sign out
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap" id="adminMain" hidden>
+      <section class="page-head">
+        <div>
+          <p class="label">Team only</p>
+          <h1 class="page-title">Admin <em>dashboard.</em></h1>
+        </div>
+        <p class="lede">
+          Registrations, the switch that opens them, and every piece of text on
+          the site you can change without touching the code.
+        </p>
+      </section>
+
+      <div class="admin-wrap">
+        <!-- the switch -->
+        <section class="reg-switchboard" aria-label="Registration switch">
+          <div>
+            <span class="switch-state off" id="regState">Closed</span>
+            <h2>Registration</h2>
+            <p id="regStateNote">
+              While this is closed, the register page shows your closed message
+              and the form will not accept anything.
+            </p>
+          </div>
+          <button class="action-btn" type="button" id="regToggle">
+            Open registration
+          </button>
+        </section>
+
+        <!-- numbers -->
+        <section aria-label="Numbers">
+          <div class="stats-row">
+            <div class="info-card">
+              <small>Total delegates</small>
+              <p id="statTotal">0</p>
+            </div>
+            <div class="info-card">
+              <small>Delegations</small>
+              <p id="statDelegates">0</p>
+            </div>
+            <div class="info-card">
+              <small>Realm entries</small>
+              <p id="statSchools">0</p>
+            </div>
+            <div class="info-card">
+              <small>Pending</small>
+              <p id="statPending">0</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- registrations -->
+        <section aria-label="Registrations">
+          <div class="section-head">
+            <div>
+              <p class="label">Who has signed up</p>
+              <h2>Registrations.</h2>
+            </div>
+          </div>
+          <div class="toolbar">
+            <input
+              type="search"
+              id="searchInput"
+              placeholder="Search name, email, school or realm"
+              aria-label="Search registrations"
+            />
+            <button class="action-btn ghost" type="button" id="refreshBtn">
+              Refresh
+            </button>
+            <button class="action-btn ghost" type="button" id="csvBtn">
+              Export CSV
+            </button>
+          </div>
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">School</th>
+                  <th scope="col">Realms</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <tr>
+                  <td colspan="4">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="admin-msg" id="tableMsg"></p>
+        </section>
+
+        <!-- realm breakdown -->
+        <section aria-label="Realm breakdown">
+          <div class="section-head">
+            <div>
+              <p class="label">Where they are going</p>
+              <h2>Per <em>realm.</em></h2>
+            </div>
+          </div>
+          <div class="realm-counts" id="realmCounts"></div>
+        </section>
+
+        <!-- content editor -->
+        <section aria-label="Site text">
+          <div class="section-head">
+            <div>
+              <p class="label">Change the site</p>
+              <h2>Text and <em>prices.</em></h2>
+            </div>
+            <p>
+              Edit anything here and press Save. It is live on the site straight
+              away. Put stars around a phrase to make it italic pink, like
+              Eleven worlds. *One event.*
+            </p>
+          </div>
+          <div id="cmsGroups"></div>
+          <div class="save-bar">
+            <button class="action-btn" type="button" id="cmsSave" disabled>
+              Save changes
+            </button>
+            <button
+              class="action-btn ghost"
+              type="button"
+              id="cmsReset"
+              disabled
+            >
+              Undo
+            </button>
+            <span class="admin-msg" id="cmsMsg"></span>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <dialog class="detail-modal" id="detailModal">
+      <p class="label">Registration</p>
+      <h2 id="detailTitle" style="margin: 4px 0 0"></h2>
+      <dl id="detailList"></dl>
+      <p class="label" id="detailPeopleHead" hidden>Delegates</p>
+      <ol class="detail-people" id="detailPeople" hidden></ol>
+      <button class="action-btn ghost" type="button" id="detailClose">
+        Close
+      </button>
+    </dialog>
+
+    <div class="auth-overlay" id="authOverlay">
+      <form class="auth-card" id="authForm">
+        <p class="label">Restricted</p>
+        <h1>Admin <em>access.</em></h1>
+        <div class="field">
+          <label for="adminPass">Password</label>
+          <input
+            id="adminPass"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+        <button class="btn" type="submit" style="width: 100%; margin-top: 14px">
+          Sign in
+        </button>
+        <p class="admin-msg" id="authMsg"></p>
+      </form>
+    </div>
+
+    <script src="/script.js" defer></script>
+    <script>
+      (() => {
+        // ---------------------------------------------------------- setup
+        // Keep this the same as RSIC_API_BASE in script.js.
+        const API_BASE = "";
+        const api = (path) =>
+          (
+            API_BASE ||
+            (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+              ? "http://localhost:5000"
+              : "")
+          ).replace(/\/$/, "") + path;
+
+        const $ = (id) => document.getElementById(id);
+        const TOKEN_KEY = "rsic_admin_token";
+        let token = sessionStorage.getItem(TOKEN_KEY) || "";
+        let rows = [];
+        let content = [];
+        let edits = {};
+
+        const request = async (path, options = {}) => {
+          const res = await fetch(api(path), {
+            ...options,
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: "Bearer " + token } : {}),
+              ...(options.headers || {}),
+            },
+          });
+          if (res.status === 401) {
+            signOut();
+            throw new Error("Signed out. Sign in again.");
+          }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || "Request failed.");
+          return data;
+        };
+
+        const say = (el, text, good) => {
+          el.textContent = text;
+          el.className = "admin-msg " + (good ? "good" : "bad");
+        };
+
+        // ---------------------------------------------------------- sign in
+        function showApp() {
+          $("authOverlay").style.display = "none";
+          $("adminMain").hidden = false;
+          $("signOutBtn").hidden = false;
+        }
+
+        function signOut() {
+          token = "";
+          sessionStorage.removeItem(TOKEN_KEY);
+          $("authOverlay").style.display = "flex";
+          $("adminMain").hidden = true;
+          $("signOutBtn").hidden = true;
+        }
+
+        $("authForm").addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const msg = $("authMsg");
+          say(msg, "Checking…", true);
+          try {
+            const res = await fetch(api("/api/admin/login"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ password: $("adminPass").value }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok)
+              return say(msg, data.error || "Wrong password.", false);
+            token = data.token;
+            sessionStorage.setItem(TOKEN_KEY, token);
+            $("adminPass").value = "";
+            msg.textContent = "";
+            showApp();
+            loadEverything();
+          } catch (err) {
+            say(
+              msg,
+              "Could not reach the server. Is the backend running?",
+              false,
+            );
+          }
+        });
+
+        $("signOutBtn").addEventListener("click", async () => {
+          try {
+            await request("/api/admin/logout", { method: "POST" });
+          } catch (err) {
+            /* the token was already gone */
+          }
+          signOut();
+        });
+
+        // ---------------------------------------------------------- data
+        async function loadEverything() {
+          await Promise.all([loadRegistrations(), loadContent()]);
+        }
+
+        function cell(text, span) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = span;
+          td.textContent = text;
+          tr.append(td);
+          return tr;
+        }
+
+        async function loadRegistrations() {
+          try {
+            const data = await request("/api/registrations");
+            rows = data.data || [];
+            $("tableMsg").textContent = "";
+            renderStats();
+            renderTable(rows);
+            renderRealms();
+          } catch (err) {
+            say($("tableMsg"), err.message, false);
+            $("tableBody").replaceChildren(
+              cell("Could not load registrations. " + err.message, 4),
+            );
+          }
+        }
+
+        // A row is a delegation. Older rows from before the change may still be
+        // single-delegate entries, so they count as one head.
+        const realmsOf = (r) =>
+          Array.isArray(r.realms) && r.realms.length
+            ? r.realms
+            : r.realm
+              ? [r.realm]
+              : [];
+
+        function renderStats() {
+          const heads = rows.reduce(
+            (n, r) => n + (Number(r.delegates) || 1),
+            0,
+          );
+          $("statTotal").textContent = heads;
+          $("statDelegates").textContent = rows.length;
+          $("statSchools").textContent = rows.reduce(
+            (n, r) => n + realmsOf(r).length,
+            0,
+          );
+          $("statPending").textContent = rows.filter(
+            (r) => (r.status || "Pending").toLowerCase() === "pending",
+          ).length;
+        }
+
+        const REALM_LABELS = {
+          math: "The Cartesian Realm",
+          pure: "Project Nexus",
+          bio: "The Watson Street",
+          chem: "Curie's Chamber",
+          physics: "Astral Axiom",
+          cs: "Hypatia's Enclave",
+          psych: "Pterion's Sanctum",
+          business: "Gaia's Exchange",
+          film: "The Joker's Act",
+          law: "Athena's Bench",
+          robotics: "Theseus' Circuit",
+        };
+        const realmName = (key) => REALM_LABELS[key] || key || "Unassigned";
+
+        // Everything below builds nodes and sets textContent, never innerHTML,
+        // so a name containing HTML is shown as text instead of being run.
+        function renderTable(list) {
+          const body = $("tableBody");
+          if (!list.length)
+            return body.replaceChildren(cell("No registrations yet.", 4));
+
+          body.replaceChildren(
+            ...list.map((row) => {
+              const status = row.status || "Pending";
+              const confirmed = status.toLowerCase() === "confirmed";
+              const tr = document.createElement("tr");
+
+              const who = document.createElement("td");
+              const strong = document.createElement("strong");
+              strong.textContent = row.school || row.name || "Unnamed";
+              const sub = document.createElement("span");
+              sub.className = "row-sub";
+              sub.textContent =
+                (row.contact_email || row.email || "no email") +
+                (row.contact_name ? " · " + row.contact_name : "") +
+                (row.delegates ? " · " + row.delegates + " delegates" : "");
+              if (Array.isArray(row.delegate_list) && row.delegate_list.length)
+                sub.textContent += " · named";
+              who.append(strong, sub);
+
+              const realm = document.createElement("td");
+              const keys = realmsOf(row);
+              realm.textContent = keys.length
+                ? keys.length + ": " + keys.map(realmName).join(", ")
+                : "None chosen";
+
+              const st = document.createElement("td");
+              const badge = document.createElement("span");
+              badge.className =
+                "status-badge " + (confirmed ? "confirmed" : "pending");
+              badge.textContent = status;
+              st.append(badge);
+
+              const actions = document.createElement("td");
+              const wrap = document.createElement("div");
+              wrap.className = "row-actions";
+
+              const toggle = document.createElement("button");
+              toggle.className = "action-btn";
+              toggle.type = "button";
+              toggle.textContent = confirmed ? "Set pending" : "Approve";
+              toggle.addEventListener("click", () =>
+                setStatus(row.id, confirmed ? "Pending" : "Confirmed", toggle),
+              );
+
+              const details = document.createElement("button");
+              details.className = "action-btn ghost";
+              details.type = "button";
+              details.textContent = "Details";
+              details.addEventListener("click", () => showDetails(row));
+
+              const del = document.createElement("button");
+              del.className = "action-btn ghost danger";
+              del.type = "button";
+              del.textContent = "Delete";
+              del.addEventListener("click", () => remove(row, del));
+
+              wrap.append(toggle, details, del);
+              actions.append(wrap);
+              tr.append(who, realm, st, actions);
+              return tr;
+            }),
+          );
+        }
+
+        function renderRealms() {
+          const counts = Object.keys(REALM_LABELS).map((key) => ({
+            name: REALM_LABELS[key],
+            n: rows.filter((r) => realmsOf(r).includes(key)).length,
+          }));
+          const max = Math.max(1, ...counts.map((c) => c.n));
+          $("realmCounts").replaceChildren(
+            ...counts.map((c) => {
+              const row = document.createElement("div");
+              row.className = "realm-count-row";
+              const name = document.createElement("span");
+              name.textContent = c.name;
+              const num = document.createElement("b");
+              num.textContent = c.n;
+              const bar = document.createElement("div");
+              bar.className = "realm-count-bar";
+              const fill = document.createElement("i");
+              fill.style.width = Math.round((c.n / max) * 100) + "%";
+              bar.append(fill);
+              row.append(name, num, bar);
+              return row;
+            }),
+          );
+        }
+
+        async function setStatus(id, status, btn) {
+          btn.disabled = true;
+          try {
+            await request("/api/registrations/" + id, {
+              method: "PATCH",
+              body: JSON.stringify({ status }),
+            });
+            await loadRegistrations();
+          } catch (err) {
+            say($("tableMsg"), err.message, false);
+            btn.disabled = false;
+          }
+        }
+
+        async function remove(row, btn) {
+          const who =
+            row.route === "school" ? row.school : row.name || "this entry";
+          if (
+            !confirm(
+              'Delete the registration for "' +
+                who +
+                '"? This cannot be undone.',
+            )
+          )
+            return;
+          btn.disabled = true;
+          try {
+            await request("/api/registrations/" + row.id, { method: "DELETE" });
+            await loadRegistrations();
+            say($("tableMsg"), "Deleted.", true);
+          } catch (err) {
+            say($("tableMsg"), err.message, false);
+            btn.disabled = false;
+          }
+        }
+
+        function showDetails(row) {
+          $("detailTitle").textContent =
+            row.school || row.name || "Unnamed";
+          const keys = realmsOf(row);
+          const pairs = [
+            ["Contact", row.contact_name || "—"],
+            ["Email", row.contact_email || row.email || "—"],
+            ["Phone", row.phone || "—"],
+            ["Delegates", row.delegates == null ? "—" : row.delegates],
+            [
+              "Realms",
+              keys.length ? keys.map(realmName).join(", ") : "None chosen",
+            ],
+          ];
+          pairs.push(
+            ["Status", row.status || "Pending"],
+            [
+              "Registered",
+              row.created_at ? new Date(row.created_at).toLocaleString() : "—",
+            ],
+            ["Reference", "#" + row.id],
+          );
+          const people = Array.isArray(row.delegate_list) ? row.delegate_list : [];
+          $("detailList").replaceChildren(
+            ...pairs.flatMap(([k, v]) => {
+              const dt = document.createElement("dt");
+              dt.textContent = k;
+              const dd = document.createElement("dd");
+              dd.textContent = String(v);
+              return [dt, dd];
+            }),
+          );
+
+          // the people themselves, one line each
+          const who = $("detailPeople");
+          if (people.length) {
+            who.replaceChildren(
+              ...people.map((p, i) => {
+                const li = document.createElement("li");
+                li.textContent =
+                  i + 1 + ". " + (p.name || "—") +
+                  " · age " + (p.age == null ? "—" : p.age) +
+                  " · " + (p.class || "—");
+                return li;
+              }),
+            );
+            who.hidden = false;
+            $("detailPeopleHead").hidden = false;
+          } else {
+            who.hidden = true;
+            $("detailPeopleHead").hidden = true;
+          }
+          $("detailModal").showModal();
+        }
+        $("detailClose").addEventListener("click", () =>
+          $("detailModal").close(),
+        );
+
+        // ---------------------------------------------------------- search
+        $("searchInput").addEventListener("input", (e) => {
+          const q = e.target.value.trim().toLowerCase();
+          if (!q) return renderTable(rows);
+          renderTable(
+            rows.filter((r) =>
+              [
+                r.name,
+                r.email,
+                r.school,
+                r.contact_name,
+                r.contact_email,
+                realmsOf(r).map(realmName).join(" "),
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase()
+                .includes(q),
+            ),
+          );
+        });
+
+        $("refreshBtn").addEventListener("click", loadRegistrations);
+
+        // ---------------------------------------------------------- CSV
+        $("csvBtn").addEventListener("click", () => {
+          if (!rows.length)
+            return say($("tableMsg"), "Nothing to export yet.", false);
+          const cols = [
+            "id",
+            "created_at",
+            "route",
+            "status",
+            "name",
+            "email",
+            "phone",
+            "realm",
+            "realms",
+            "school",
+            "contact_name",
+            "contact_email",
+            "delegates",
+            "delegate_list",
+          ];
+          const esc = (v) =>
+            '"' +
+            String(
+              v == null
+                ? ""
+                : Array.isArray(v)
+                  ? v
+                      .map((x) =>
+                        x && typeof x === "object"
+                          ? [x.name, x.age, x.class].filter(Boolean).join(" ")
+                          : x,
+                      )
+                      .join(" | ")
+                  : v,
+            ).replace(
+              /"/g,
+              '""',
+            ) +
+            '"';
+          const csv = [
+            cols.join(","),
+            ...rows.map((r) => cols.map((c) => esc(r[c])).join(",")),
+          ].join("\r\n");
+          const url = URL.createObjectURL(
+            new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }),
+          );
+          const a = document.createElement("a");
+          a.href = url;
+          a.download =
+            "rsic-registrations-" +
+            new Date().toISOString().slice(0, 10) +
+            ".csv";
+          a.click();
+          URL.revokeObjectURL(url);
+          say($("tableMsg"), "Exported " + rows.length + " rows.", true);
+        });
+
+        // ---------------------------------------------------------- the switch
+        const valueOf = (key) => {
+          if (key in edits) return edits[key];
+          const row = content.find((r) => r.key === key);
+          return row ? row.value : "";
+        };
+
+        function paintSwitch() {
+          const open =
+            (valueOf("registration.open") || "off").toLowerCase() === "on";
+          const state = $("regState");
+          state.textContent = open ? "Open" : "Closed";
+          state.className = "switch-state " + (open ? "on" : "off");
+          $("regToggle").textContent = open
+            ? "Close registration"
+            : "Open registration";
+          $("regStateNote").textContent = open
+            ? "The form is live. Anyone on the register page can sign up right now."
+            : "While this is closed, the register page shows your closed message and the form will not accept anything.";
+        }
+
+        $("regToggle").addEventListener("click", async () => {
+          const open =
+            (valueOf("registration.open") || "off").toLowerCase() === "on";
+          const next = open ? "off" : "on";
+          if (
+            next === "on" &&
+            !confirm("Open registration now? The form goes live for everyone.")
+          )
+            return;
+          $("regToggle").disabled = true;
+          try {
+            await request("/api/content", {
+              method: "PATCH",
+              body: JSON.stringify({ updates: { "registration.open": next } }),
+            });
+            await loadContent();
+            say(
+              $("cmsMsg"),
+              "Registration is now " + (next === "on" ? "open." : "closed."),
+              true,
+            );
+          } catch (err) {
+            say($("cmsMsg"), err.message, false);
+          } finally {
+            $("regToggle").disabled = false;
+          }
+        });
+
+        // ---------------------------------------------------------- editor
+        async function loadContent() {
+          try {
+            const data = await request("/api/content/all");
+            content = data.content || [];
+            edits = {};
+            renderEditor();
+            paintSwitch();
+            markDirty();
+          } catch (err) {
+            say($("cmsMsg"), err.message, false);
+          }
+        }
+
+        function renderEditor() {
+          const groups = new Map();
+          content
+            .filter((r) => r.key !== "registration.open")
+            .forEach((r) => {
+              if (!groups.has(r.category)) groups.set(r.category, []);
+              groups.get(r.category).push(r);
+            });
+
+          $("cmsGroups").replaceChildren(
+            ...[...groups.entries()].map(([category, items]) => {
+              const box = document.createElement("details");
+              box.className = "cms-group";
+              const sum = document.createElement("summary");
+              sum.textContent = category + " (" + items.length + ")";
+              const fields = document.createElement("div");
+              fields.className = "cms-fields";
+
+              items.forEach((item) => {
+                const field = document.createElement("div");
+                field.className = "cms-field field";
+                const label = document.createElement("label");
+                label.textContent = item.label || item.key;
+                label.htmlFor = "cms-" + item.key;
+                const input = document.createElement(
+                  item.input === "textarea" ? "textarea" : "input",
+                );
+                input.id = "cms-" + item.key;
+                input.value = item.value;
+                input.addEventListener("input", () => {
+                  if (input.value === item.value) delete edits[item.key];
+                  else edits[item.key] = input.value;
+                  field.classList.toggle("changed", item.key in edits);
+                  markDirty();
+                });
+                field.append(label, input);
+                fields.append(field);
+              });
+
+              box.append(sum, fields);
+              return box;
+            }),
+          );
+        }
+
+        function markDirty() {
+          const n = Object.keys(edits).length;
+          $("cmsSave").disabled = n === 0;
+          $("cmsReset").disabled = n === 0;
+          $("cmsSave").textContent = n
+            ? "Save " + n + " change" + (n > 1 ? "s" : "")
+            : "Save changes";
+        }
+
+        $("cmsSave").addEventListener("click", async () => {
+          $("cmsSave").disabled = true;
+          say($("cmsMsg"), "Saving…", true);
+          try {
+            const data = await request("/api/content", {
+              method: "PATCH",
+              body: JSON.stringify({ updates: edits }),
+            });
+            await loadContent();
+            say(
+              $("cmsMsg"),
+              "Saved " + data.updated + ". The site is updated.",
+              true,
+            );
+          } catch (err) {
+            say($("cmsMsg"), err.message, false);
+            markDirty();
+          }
+        });
+
+        $("cmsReset").addEventListener("click", () => {
+          edits = {};
+          renderEditor();
+          markDirty();
+          say($("cmsMsg"), "Changes undone.", true);
+        });
+
+        // ---------------------------------------------------------- start
+        (async () => {
+          if (!token) return;
+          try {
+            await request("/api/admin/check");
+            showApp();
+            loadEverything();
+          } catch (err) {
+            signOut();
+          }
+        })();
+      })();
+    </script>
+  </body>
+</html>

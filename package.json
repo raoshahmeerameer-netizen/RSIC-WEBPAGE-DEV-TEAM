@@ -1,6 +1,21 @@
 {
+  "name": "rsic-website",
+  "version": "1.0.0",
+  "description": "RSIC 2026 website and registration API",
+  "private": true,
+  "type": "commonjs",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "@supabase/supabase-js": "^2.116.0",
-    "dotenv": "^18.0.0"
+    "@supabase/supabase-js": "^2.58.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2"
   }
 }
