@@ -623,8 +623,8 @@ a.tile{text-decoration:none;color:inherit}
 
 
 /* ---- Cinzel wordmark (replaces the drawn SVG) ---- */
-.logo{width:auto}
-.logo .wm{display:flex;align-items:baseline;font:700 1.5rem/1 var(--display);letter-spacing:.07em}
+.logo{width:auto;text-decoration:none}
+.logo .wm{display:flex;align-items:baseline;font:700 1.72rem/1 var(--display);letter-spacing:.05em}
 .logo .wm i{display:inline-block;font-style:normal;transform-origin:50% 100%}
 .logo .wm .dot{color:var(--pink);letter-spacing:0}
 .logo.draw i:not(.dot){animation:logo-rise .7s var(--ease) both;animation-delay:calc(var(--i) * 90ms)}
