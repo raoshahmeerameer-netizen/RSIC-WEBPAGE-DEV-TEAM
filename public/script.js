@@ -1110,7 +1110,7 @@ if (regForm) {
   };
 
   optional.forEach((b) => b.addEventListener("change", paintTally));
-  // One row of name, age and class per delegate. Rows are rebuilt when the
+  // One row of name, email, number and photo per delegate. Rows are rebuilt when the
   // headcount changes, and anything already typed is carried over.
   // a rebuilt row cannot keep a chosen file, so the files are held here by index
   const photoFiles = [];
@@ -1120,13 +1120,14 @@ if (regForm) {
       name: row.querySelector('[data-f="name"]').value.trim(),
       email: row.querySelector('[data-f="email"]').value.trim(),
       phone: row.querySelector('[data-f="phone"]').value.trim(),
+      cnic: row.querySelector('[data-f="cnic"]').value.trim(),
     }));
 
   const peopleOk = () => {
     const rows = peopleValues();
     return (
       rows.length === Math.max(0, parseInt(delegates.value, 10) - 1) &&
-      rows.every((p, i) => p.name && p.email && p.phone && photoFiles[i])
+      rows.every((p, i) => p.name && p.email && p.phone && p.cnic && photoFiles[i])
     );
   };
 
@@ -1140,7 +1141,7 @@ if (regForm) {
 
     const rows = [];
     for (let i = 0; i < wanted; i++) {
-      const had = kept[i] || { name: "", email: "", phone: "" };
+      const had = kept[i] || { name: "", email: "", phone: "", cnic: "" };
       const row = document.createElement("div");
       row.className = "person";
       row.innerHTML =
@@ -1163,12 +1164,18 @@ if (regForm) {
         'p" data-f="phone" type="tel" autocomplete="off"></div>' +
         '<div class="field"><label for="p' +
         i +
+        'i">CNIC (delegate or parent)</label><input id="p' +
+        i +
+        'i" data-f="cnic" type="text" inputmode="numeric" autocomplete="off"></div>' +
+        '<div class="field"><label for="p' +
+        i +
         'f">Photo</label><input id="p' +
         i +
         'f" data-f="photo" type="file" accept="image/jpeg,image/png,image/webp"></div>';
       row.querySelector('[data-f="name"]').value = had.name;
       row.querySelector('[data-f="email"]').value = had.email || "";
       row.querySelector('[data-f="phone"]').value = had.phone || "";
+      row.querySelector('[data-f="cnic"]').value = had.cnic || "";
       const photo = row.querySelector('[data-f="photo"]');
       const note = document.createElement("small");
       note.className = "person-file";
@@ -1252,6 +1259,7 @@ if (regForm) {
     if (!value("s-head-name")) problems.push("the head delegate's name");
     if (!value("s-head-email")) problems.push("the head delegate's email");
     if (!value("s-head-phone")) problems.push("the head delegate's number");
+    if (!value("s-head-cnic")) problems.push("the head delegate's CNIC");
     if (!file("s-head-photo")) problems.push("a photo of the head delegate");
 
     if (!delegatesOk())
@@ -1263,7 +1271,7 @@ if (regForm) {
         "between " + rules.realmsMin + " and " + rules.realmsMax + " realms",
       );
     if (delegatesOk() && !peopleOk())
-      problems.push("a name, email, number and photo for every other delegate");
+      problems.push("a name, email, number, CNIC and photo for every other delegate");
 
     if (problems.length) {
       regStatus.className = "reg-status is-bad";
@@ -1287,6 +1295,7 @@ if (regForm) {
         name: value("s-head-name"),
         email: value("s-head-email"),
         phone: value("s-head-phone"),
+        cnic: value("s-head-cnic"),
       },
       delegates: value("s-delegates"),
       realms: boxes.filter((b) => b.checked).map((b) => b.value),

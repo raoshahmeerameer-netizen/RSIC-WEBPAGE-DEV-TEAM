@@ -132,6 +132,10 @@
                 </div>
               </div>
               <div class="field">
+                <label for="s-head-cnic">CNIC (delegate or parent)</label>
+                <input id="s-head-cnic" name="head_cnic" type="text" inputmode="numeric" autocomplete="off" required />
+              </div>
+              <div class="field">
                 <label for="s-head-photo">Photo</label>
                 <input id="s-head-photo" name="head_photo" type="file" accept="image/jpeg,image/png,image/webp" required />
                 <p class="field-note">JPG, PNG or WebP. Up to 5 MB.</p>
@@ -151,8 +155,8 @@
             <fieldset class="reg-field active reg-people" id="peopleField" hidden>
               <legend class="reg-legend">Your delegates</legend>
               <p class="field-hint" id="peopleHint">
-                Name, age and class for each delegate. Set the number above and
-                the rows appear here.
+                Name, email, number, CNIC and photo for every delegate except the
+                head delegate. Set the number above and the rows appear here.
               </p>
               <div class="people-list" id="peopleList"></div>
             </fieldset>

@@ -354,6 +354,20 @@
       .guide-row input[type=file]{font-size:.78rem;padding:8px 10px}
       @media (max-width:760px){.guide-row{grid-template-columns:minmax(0,1fr)}}
 
+      .panel-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 30px;padding:6px;
+        border-radius:14px;background:var(--surface)}
+      .panel-tab{flex:1 1 auto;padding:12px 18px;border:0;border-radius:10px;cursor:pointer;
+        background:transparent;color:var(--text-soft);font:600 .92rem/1 var(--sans);white-space:nowrap}
+      .panel-tab:hover{background:var(--surface-2);color:var(--text)}
+      .panel-tab.active{background:var(--pink);color:var(--on-pink)}
+      .panel[hidden]{display:none}
+      .panel{margin-bottom:clamp(34px,4vw,56px)}
+      .cms-field{margin-bottom:18px}
+      .cms-field label{display:block;margin-bottom:7px}
+      .guide-row{padding:16px 18px}
+      .guide-rows{gap:10px}
+      .section-head{margin-bottom:22px}
+
       /* details panel */
       dialog.detail-modal {
         border: 1px solid var(--edge-strong);
@@ -453,7 +467,15 @@
 
       <div class="admin-wrap">
         <!-- the switch -->
-        <section class="reg-switchboard" aria-label="Registration switch">
+                <nav class="panel-tabs" id="panelTabs" aria-label="Dashboard sections">
+          <button class="panel-tab active" type="button" data-panels="panel-switch panel-numbers panel-regs panel-breakdown">Registrations</button>
+          <button class="panel-tab" type="button" data-panels="panel-text">Site text</button>
+          <button class="panel-tab" type="button" data-panels="panel-guides">Study guides</button>
+          <button class="panel-tab" type="button" data-panels="panel-forms">Event forms</button>
+          <button class="panel-tab" type="button" data-panels="panel-logos">Realm logos</button>
+        </nav>
+
+<section class="reg-switchboard panel" id="panel-switch" aria-label="Registration switch">
           <div>
             <span class="switch-state off" id="regState">Closed</span>
             <h2>Registration</h2>
@@ -468,7 +490,7 @@
         </section>
 
         <!-- numbers -->
-        <section aria-label="Numbers">
+        <section class="panel" id="panel-numbers" aria-label="Numbers">
           <div class="stats-row">
             <div class="info-card">
               <small>Total delegates</small>
@@ -490,7 +512,7 @@
         </section>
 
         <!-- registrations -->
-        <section aria-label="Registrations">
+        <section class="panel" id="panel-regs" aria-label="Registrations">
           <div class="section-head">
             <div>
               <p class="label">Who has signed up</p>
@@ -532,7 +554,7 @@
         </section>
 
         <!-- realm breakdown -->
-        <section aria-label="Realm breakdown">
+        <section class="panel" id="panel-breakdown" aria-label="Realm breakdown">
           <div class="section-head">
             <div>
               <p class="label">Where they are going</p>
@@ -543,7 +565,23 @@
         </section>
 
         <!-- content editor -->
-        <section aria-label="Event forms">
+        <section class="panel" id="panel-logos" aria-label="Realm logos">
+          <div class="section-head">
+            <div>
+              <p class="label">Per realm</p>
+              <h2>Realm <em>logos.</em></h2>
+            </div>
+            <p>
+              Upload a logo and it replaces the drawn glyph for that realm
+              everywhere: the realm card, the realm page and the Lab. PNG or
+              WebP, transparent works best. Remove it and the glyph returns.
+            </p>
+          </div>
+          <div id="logoRows" class="guide-rows"></div>
+          <p class="reg-status" id="logoMsg" role="status"></p>
+        </section>
+
+        <section class="panel" id="panel-forms" aria-label="Event forms">
           <div class="section-head">
             <div>
               <p class="label">For schools to download</p>
@@ -559,7 +597,7 @@
           <p class="reg-status" id="docMsg" role="status"></p>
         </section>
 
-        <section aria-label="Study guides">
+        <section class="panel" id="panel-guides" aria-label="Study guides">
           <div class="section-head">
             <div>
               <p class="label">Per realm</p>
@@ -575,7 +613,7 @@
           <p class="reg-status" id="guideMsg" role="status"></p>
         </section>
 
-        <section aria-label="Site text">
+        <section class="panel" id="panel-text" aria-label="Site text">
           <div class="section-head">
             <div>
               <p class="label">Change the site</p>
@@ -965,6 +1003,7 @@
             ["Head delegate", head.name || "—"],
             ["Head delegate email", head.email || "—"],
             ["Head delegate number", head.phone || "—"],
+            ["Head delegate CNIC", head.cnic || "—"],
             ["Delegates", row.delegates == null ? "—" : row.delegates],
             [
               "Realms",
@@ -1040,7 +1079,8 @@
                   " · age " + (p.age == null ? "—" : p.age) +
                   " · " + (p.class || "—") +
                   (p.email ? " · " + p.email : "") +
-                  (p.phone ? " · " + p.phone : "");
+                  (p.phone ? " · " + p.phone : "") +
+                  (p.cnic ? " · CNIC " + p.cnic : "");
                 const ph = fileLink("photo", p.photo);
                 if (ph) li.append(" ", ph);
                 return li;
@@ -1057,6 +1097,93 @@
         $("detailClose").addEventListener("click", () =>
           $("detailModal").close(),
         );
+
+        // ---------------------------------------------------------- realm logos
+        function renderLogos() {
+          const current = new Map(content.map((r) => [r.key, r.value]));
+          $("logoRows").replaceChildren(
+            ...GUIDE_REALMS.map(([key, name]) => {
+              const url = current.get("realm." + key + ".logo") || "";
+              const row = document.createElement("div");
+              row.className = "guide-row";
+
+              const title = document.createElement("b");
+              title.textContent = name;
+
+              const file = document.createElement("input");
+              file.type = "file";
+              file.accept = "image/png,image/webp";
+
+              const state = document.createElement("span");
+              state.className = url ? "has" : "none";
+              state.textContent = url ? "Custom logo" : "Drawn glyph";
+
+              const btn = document.createElement("button");
+              btn.className = "action-btn";
+              btn.type = "button";
+              btn.textContent = url ? "Replace" : "Upload";
+              btn.addEventListener("click", async () => {
+                const f = file.files[0];
+                if (!f) return say($("logoMsg"), "Choose a PNG or WebP first.", false);
+                btn.disabled = true;
+                say($("logoMsg"), "Uploading " + name + "...", true);
+                try {
+                  const body = new FormData();
+                  body.append("realm", key);
+                  body.append("logo", f);
+                  const r = await fetch(api("/api/admin/logo"), {
+                    method: "POST",
+                    headers: { Authorization: "Bearer " + token },
+                    body,
+                  });
+                  const d = await r.json().catch(() => ({}));
+                  if (!r.ok) throw new Error(d.error || "Upload failed.");
+                  say($("logoMsg"), name + " logo is live across the site.", true);
+                  await loadContent();
+                } catch (e) {
+                  say($("logoMsg"), e.message, false);
+                } finally {
+                  btn.disabled = false;
+                }
+              });
+              row.append(title, file, state, btn);
+
+              if (url) {
+                const rm = document.createElement("button");
+                rm.className = "action-btn ghost";
+                rm.type = "button";
+                rm.textContent = "Use drawn glyph";
+                rm.addEventListener("click", async () => {
+                  try {
+                    const r = await fetch(
+                      api("/api/admin/logo?realm=" + encodeURIComponent(key)),
+                      { method: "DELETE", headers: { Authorization: "Bearer " + token } },
+                    );
+                    if (!r.ok) throw new Error("Could not remove it.");
+                    say($("logoMsg"), name + " is back to the drawn glyph.", true);
+                    await loadContent();
+                  } catch (e) {
+                    say($("logoMsg"), e.message, false);
+                  }
+                });
+                row.append(rm);
+              }
+              return row;
+            }),
+          );
+        }
+
+        // ---------------------------------------------------------- panel tabs
+        const panelTabs = [...document.querySelectorAll(".panel-tab")];
+        function showPanels(tab) {
+          const wanted = tab.dataset.panels.split(" ");
+          panelTabs.forEach((b) => b.classList.toggle("active", b === tab));
+          document.querySelectorAll(".panel").forEach((pn) => {
+            pn.hidden = !wanted.includes(pn.id);
+          });
+        }
+        panelTabs.forEach((b) => b.addEventListener("click", () => showPanels(b)));
+        showPanels(panelTabs[0]);
 
         // ---------------------------------------------------------- event forms
         const EVENT_FORMS = [
@@ -1367,6 +1494,7 @@
             renderEditor();
             renderGuides();
             renderDocs();
+            renderLogos();
             paintSwitch();
             markDirty();
           } catch (err) {

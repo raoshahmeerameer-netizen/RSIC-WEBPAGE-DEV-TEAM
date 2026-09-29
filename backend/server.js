@@ -291,7 +291,12 @@ app.post("/api/register", upload.any(), async (req, res) => {
         return res
           .status(400)
           .json({ error: "Every delegate needs a phone number." });
-      delegateList.push({ name, email: pEmail, phone: pPhone });
+      const pCnic = String((person && person.cnic) || "").trim().slice(0, 30);
+      if (!pCnic)
+        return res.status(400).json({
+          error: "Every delegate needs a CNIC, their own or a parent's.",
+        });
+      delegateList.push({ name, email: pEmail, phone: pPhone, cnic: pCnic });
     }
 
     // unknown keys are dropped, duplicates collapsed, compulsory ones always added
@@ -323,6 +328,7 @@ app.post("/api/register", upload.any(), async (req, res) => {
       [head.name, "The head delegate's name"],
       [head.email, "The head delegate's email"],
       [head.phone, "The head delegate's number"],
+      [head.cnic, "The head delegate's CNIC"],
     ])
       if (!String(v || "").trim())
         return res.status(400).json({ error: label + " is required." });
@@ -366,6 +372,7 @@ app.post("/api/register", upload.any(), async (req, res) => {
         name: clip(head.name, 120),
         email: clip(head.email, 160),
         phone: clip(head.phone, 40),
+        cnic: clip(head.cnic, 30),
         photo: headPhoto,
       },
       files_folder: folder,
@@ -484,6 +491,53 @@ app.post("/api/admin/guide", requireAdmin, upload.single("guide"), async (req, r
   if (e2) return res.status(500).json({ error: e2.message });
   await loadContent(true);
   res.json({ ok: true, url });
+});
+
+// A realm's logo. Public, and it replaces the drawn glyph everywhere.
+app.post("/api/admin/logo", requireAdmin, upload.single("logo"), async (req, res) => {
+  const realm = String(req.body.realm || "");
+  if (!REALM_KEYS.includes(realm))
+    return res.status(400).json({ error: "Unknown realm." });
+  if (!req.file) return res.status(400).json({ error: "No file." });
+  if (!["image/png", "image/webp"].includes(req.file.mimetype))
+    return res.status(400).json({ error: "The logo must be a PNG or WebP." });
+
+  const path = "logos/" + realm + "." + EXT[req.file.mimetype];
+  const { error } = await supabase.storage
+    .from("study-guides")
+    .upload(path, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+  if (error) return res.status(500).json({ error: error.message });
+
+  const { data } = supabase.storage.from("study-guides").getPublicUrl(path);
+  const { error: e2 } = await supabase.from("site_content").upsert(
+    {
+      key: "realm." + realm + ".logo",
+      value: data.publicUrl + "?v=" + Date.now(),
+      label: "Realm logo",
+      category: "Realm logos",
+      input: "text",
+      position: 1,
+    },
+    { onConflict: "key" },
+  );
+  if (e2) return res.status(500).json({ error: e2.message });
+  await loadContent(true);
+  res.json({ ok: true });
+});
+
+app.delete("/api/admin/logo", requireAdmin, async (req, res) => {
+  const realm = String(req.query.realm || "");
+  if (!REALM_KEYS.includes(realm))
+    return res.status(400).json({ error: "Unknown realm." });
+  await supabase.storage
+    .from("study-guides")
+    .remove(["logos/" + realm + ".png", "logos/" + realm + ".webp"]);
+  await supabase
+    .from("site_content")
+    .update({ value: "" })
+    .eq("key", "realm." + realm + ".logo");
+  await loadContent(true);
+  res.json({ ok: true });
 });
 
 // The three blank forms schools download. Public, like the study guides.
