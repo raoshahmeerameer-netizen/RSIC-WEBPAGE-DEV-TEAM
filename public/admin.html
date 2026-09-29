@@ -315,6 +315,30 @@
         color: var(--pink-light);
       }
 
+      /* content editor: tabs + live preview */
+      .cms-shell{display:grid;grid-template-columns:230px minmax(0,1fr);gap:16px;align-items:start}
+      .cms-tabs{display:flex;flex-direction:column;gap:4px;max-height:70vh;overflow-y:auto;padding-right:4px}
+      .cms-tab{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
+        text-align:left;padding:10px 12px;border:0;border-radius:10px;cursor:pointer;
+        background:transparent;color:var(--text-soft);font:600 .86rem/1.25 var(--sans)}
+      .cms-tab b{font:500 .78rem/1 var(--nums);opacity:.7}
+      .cms-tab:hover{background:var(--surface-2);color:var(--text)}
+      .cms-tab.active{background:var(--pink);color:var(--on-pink)}
+      .cms-tab.active b{opacity:.85}
+      .cms-pane{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+      .cms-fields-wrap{max-height:70vh;overflow-y:auto;padding-right:6px}
+      .cms-fields-head{margin:0 0 14px;font:600 1.05rem/1.2 var(--serif);color:var(--pink)}
+      .cms-preview{position:sticky;top:16px;border-radius:14px;overflow:hidden;background:var(--surface-2)}
+      .cms-preview-bar{display:flex;align-items:center;gap:8px;padding:8px 10px;font:500 .76rem/1 var(--sans);color:var(--text-soft)}
+      .cms-preview-bar span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .cms-preview-bar .action-btn{padding:6px 10px;font-size:.74rem}
+      #cmsFrame{display:block;width:100%;height:66vh;border:0;background:#040b1a}
+      @media (max-width:1100px){.cms-pane{grid-template-columns:minmax(0,1fr)}
+        .cms-preview{position:static}#cmsFrame{height:50vh}}
+      @media (max-width:760px){.cms-shell{grid-template-columns:minmax(0,1fr)}
+        .cms-tabs{flex-direction:row;flex-wrap:wrap;max-height:none}
+        .cms-tab{width:auto}}
+
       /* details panel */
       dialog.detail-modal {
         border: 1px solid var(--edge-strong);
@@ -516,7 +540,22 @@
               Eleven worlds. *One event.*
             </p>
           </div>
-          <div id="cmsGroups"></div>
+          <div class="cms-shell">
+            <nav class="cms-tabs" id="cmsTabs" aria-label="Pages to edit"></nav>
+            <div class="cms-pane">
+              <div class="cms-fields-wrap" id="cmsFields"></div>
+              <div class="cms-preview">
+                <div class="cms-preview-bar">
+                  <span id="cmsPreviewUrl">Preview</span>
+                  <button class="action-btn ghost" type="button" id="cmsReload">
+                    Reload
+                  </button>
+                  <a class="action-btn ghost" id="cmsOpen" target="_blank" rel="noopener">Open</a>
+                </div>
+                <iframe id="cmsFrame" title="Live preview of the page you are editing"></iframe>
+              </div>
+            </div>
+          </div>
           <div class="save-bar">
             <button class="action-btn" type="button" id="cmsSave" disabled>
               Save changes
@@ -1066,6 +1105,77 @@
           }
         }
 
+        // which page each group of fields belongs to, so the preview can follow
+        const REALM_FILE = {
+          pure: "nexus", business: "gaias-exchange", math: "cartesian",
+          bio: "watson-street", chem: "curies-chamber", physics: "astral-axiom",
+          cs: "hypatias-enclave", psych: "pterions-sanctum", film: "jokers-act",
+          law: "athenas-bench", robotics: "theseus-circuit",
+        };
+        const PAGE_FOR = {
+          "Page: Home": "/", "Page: About": "/about", "Page: Realms": "/realms",
+          "Page: Realms (Lab section)": "/realms", "Page: Experience": "/experience",
+          "Page: Team": "/team", "Page: Code of Conduct": "/conduct",
+          "Page: Updates": "/updates", "Page: Media": "/media",
+          "Page: Register": "/register", Team: "/team", Registration: "/register",
+          "Registration rules": "/register", Fees: "/register", Event: "/",
+        };
+        function previewFor(category, items) {
+          const k = (items[0] && items[0].key) || "";
+          let m = k.match(/^realm\.([a-z]+)\./);
+          if (m && REALM_FILE[m[1]]) return "/realms/" + REALM_FILE[m[1]];
+          m = k.match(/^team\.member\.([a-z-]+)\./);
+          if (m) return "/team/" + m[1];
+          return PAGE_FOR[category] || "/";
+        }
+
+        let cmsActive = null;
+
+        function showPreview(url) {
+          const frame = $("cmsFrame");
+          frame.src = url + (url.includes("?") ? "&" : "?") + "preview=" + Date.now();
+          $("cmsPreviewUrl").textContent = url;
+          $("cmsOpen").href = url;
+        }
+
+        function renderFields(category, items) {
+          cmsActive = category;
+          [...$("cmsTabs").children].forEach((b) =>
+            b.classList.toggle("active", b.dataset.cat === category),
+          );
+          const wrap = document.createElement("div");
+          const head = document.createElement("p");
+          head.className = "cms-fields-head";
+          head.textContent = category;
+          wrap.append(head);
+          items.forEach((item) => {
+            const field = document.createElement("div");
+            field.className = "cms-field field";
+            const label = document.createElement("label");
+            label.textContent = item.label || item.key;
+            label.htmlFor = "cms-" + item.key;
+            const input = document.createElement(
+              item.input === "textarea" ? "textarea" : "input",
+            );
+            input.id = "cms-" + item.key;
+            input.value = item.value;
+            if (item.key in edits) {
+              input.value = edits[item.key];
+              field.classList.add("changed");
+            }
+            input.addEventListener("input", () => {
+              if (input.value === item.value) delete edits[item.key];
+              else edits[item.key] = input.value;
+              field.classList.toggle("changed", item.key in edits);
+              markDirty();
+            });
+            field.append(label, input);
+            wrap.append(field);
+          });
+          $("cmsFields").replaceChildren(wrap);
+          showPreview(previewFor(category, items));
+        }
+
         function renderEditor() {
           const groups = new Map();
           content
@@ -1075,41 +1185,30 @@
               groups.get(r.category).push(r);
             });
 
-          $("cmsGroups").replaceChildren(
-            ...[...groups.entries()].map(([category, items]) => {
-              const box = document.createElement("details");
-              box.className = "cms-group";
-              const sum = document.createElement("summary");
-              sum.textContent = category + " (" + items.length + ")";
-              const fields = document.createElement("div");
-              fields.className = "cms-fields";
-
-              items.forEach((item) => {
-                const field = document.createElement("div");
-                field.className = "cms-field field";
-                const label = document.createElement("label");
-                label.textContent = item.label || item.key;
-                label.htmlFor = "cms-" + item.key;
-                const input = document.createElement(
-                  item.input === "textarea" ? "textarea" : "input",
-                );
-                input.id = "cms-" + item.key;
-                input.value = item.value;
-                input.addEventListener("input", () => {
-                  if (input.value === item.value) delete edits[item.key];
-                  else edits[item.key] = input.value;
-                  field.classList.toggle("changed", item.key in edits);
-                  markDirty();
-                });
-                field.append(label, input);
-                fields.append(field);
-              });
-
-              box.append(sum, fields);
-              return box;
+          const entries = [...groups.entries()];
+          $("cmsTabs").replaceChildren(
+            ...entries.map(([category, items]) => {
+              const b = document.createElement("button");
+              b.type = "button";
+              b.className = "cms-tab";
+              b.dataset.cat = category;
+              const name = document.createElement("span");
+              name.textContent = category;
+              const n = document.createElement("b");
+              n.textContent = items.length;
+              b.append(name, n);
+              b.addEventListener("click", () => renderFields(category, items));
+              return b;
             }),
           );
+
+          const keep = entries.find(([c]) => c === cmsActive) || entries[0];
+          if (keep) renderFields(keep[0], keep[1]);
         }
+
+        $("cmsReload").addEventListener("click", () => {
+          if (cmsActive) $("cmsFrame").contentWindow.location.reload();
+        });
 
         function markDirty() {
           const n = Object.keys(edits).length;
@@ -1129,6 +1228,8 @@
               body: JSON.stringify({ updates: edits }),
             });
             await loadContent();
+            const items = content.filter((r) => r.category === cmsActive);
+            if (items.length) showPreview(previewFor(cmsActive, items));
             say(
               $("cmsMsg"),
               "Saved " + data.updated + ". The site is updated.",
