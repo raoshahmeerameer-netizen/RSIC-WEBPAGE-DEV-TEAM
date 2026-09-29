@@ -339,6 +339,21 @@
         .cms-tabs{flex-direction:row;flex-wrap:wrap;max-height:none}
         .cms-tab{width:auto}}
 
+      .detail-files{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+      .file-link{display:inline-block;padding:7px 12px;border-radius:8px;background:var(--surface-2);
+        color:var(--pink-light);text-decoration:none;font:600 .8rem/1 var(--sans);cursor:pointer}
+      .file-link:hover{background:var(--pink);color:var(--on-pink)}
+      #detailPeople .file-link{padding:3px 8px;font-size:.72rem}
+
+      .guide-rows{display:grid;gap:8px}
+      .guide-row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr) auto auto;
+        gap:10px;align-items:center;padding:12px 14px;border-radius:10px;background:var(--surface)}
+      .guide-row b{font:600 .92rem/1.2 var(--sans)}
+      .guide-row .has{font:600 .76rem/1 var(--sans);color:var(--pink-light)}
+      .guide-row .none{font:500 .76rem/1 var(--sans);color:var(--text-soft)}
+      .guide-row input[type=file]{font-size:.78rem;padding:8px 10px}
+      @media (max-width:760px){.guide-row{grid-template-columns:minmax(0,1fr)}}
+
       /* details panel */
       dialog.detail-modal {
         border: 1px solid var(--edge-strong);
@@ -528,6 +543,22 @@
         </section>
 
         <!-- content editor -->
+        <section aria-label="Study guides">
+          <div class="section-head">
+            <div>
+              <p class="label">Per realm</p>
+              <h2>Study <em>guides.</em></h2>
+            </div>
+            <p>
+              Upload the final PDF for a realm and a download button appears on
+              that realm's page straight away. Replacing one overwrites the old
+              file. PDF only, up to 20 MB.
+            </p>
+          </div>
+          <div id="guideRows" class="guide-rows"></div>
+          <p class="reg-status" id="guideMsg" role="status"></p>
+        </section>
+
         <section aria-label="Site text">
           <div class="section-head">
             <div>
@@ -578,6 +609,7 @@
       <p class="label">Registration</p>
       <h2 id="detailTitle" style="margin: 4px 0 0"></h2>
       <dl id="detailList"></dl>
+      <div class="detail-files" id="detailFiles" hidden></div>
       <p class="label" id="detailPeopleHead" hidden>Delegates</p>
       <ol class="detail-people" id="detailPeople" hidden></ol>
       <button class="action-btn ghost" type="button" id="detailClose">
@@ -907,10 +939,16 @@
           $("detailTitle").textContent =
             row.school || row.name || "Unnamed";
           const keys = realmsOf(row);
+          const head = row.head_delegate || {};
           const pairs = [
-            ["Contact", row.contact_name || "—"],
-            ["Email", row.contact_email || row.email || "—"],
-            ["Phone", row.phone || "—"],
+            ["Team name", row.team_name || "—"],
+            ["School email", row.school_email || "—"],
+            ["Supervisor", row.supervisor_name || row.contact_name || "—"],
+            ["Supervisor email", row.supervisor_email || row.contact_email || "—"],
+            ["Supervisor number", row.supervisor_phone || row.phone || "—"],
+            ["Head delegate", head.name || "—"],
+            ["Head delegate email", head.email || "—"],
+            ["Head delegate number", head.phone || "—"],
             ["Delegates", row.delegates == null ? "—" : row.delegates],
             [
               "Realms",
@@ -926,6 +964,32 @@
             ["Reference", "#" + row.id],
           );
           const people = Array.isArray(row.delegate_list) ? row.delegate_list : [];
+
+          // files live in a private bucket; these links go through the
+          // admin-only route, which mints a URL that dies after 60 seconds
+          const fileLink = (label, path) => {
+            if (!path) return null;
+            const a = document.createElement("a");
+            a.className = "file-link";
+            a.textContent = label;
+            a.target = "_blank";
+            a.rel = "noopener";
+            a.href = api("/api/admin/file?path=" + encodeURIComponent(path));
+            a.addEventListener("click", async (ev) => {
+              ev.preventDefault();
+              try {
+                const r = await fetch(a.href, {
+                  headers: { Authorization: "Bearer " + token },
+                  redirect: "follow",
+                });
+                if (!r.ok) throw new Error("Could not open that file.");
+                window.open(r.url, "_blank", "noopener");
+              } catch (e) {
+                alert(e.message);
+              }
+            });
+            return a;
+          };
           $("detailList").replaceChildren(
             ...pairs.flatMap(([k, v]) => {
               const dt = document.createElement("dt");
@@ -936,6 +1000,21 @@
             }),
           );
 
+          // the documents, opened through the admin-only route
+          const docs = [
+            fileLink("Waiver of liability", row.waiver_path),
+            fileLink("Head delegate form", row.head_form_path),
+            fileLink("Head delegate photo", head.photo),
+          ].filter(Boolean);
+          const docBox = $("detailFiles");
+          if (docs.length) {
+            docBox.replaceChildren(...docs);
+            docBox.hidden = false;
+          } else {
+            docBox.replaceChildren();
+            docBox.hidden = true;
+          }
+
           // the people themselves, one line each
           const who = $("detailPeople");
           if (people.length) {
@@ -945,7 +1024,11 @@
                 li.textContent =
                   i + 1 + ". " + (p.name || "—") +
                   " · age " + (p.age == null ? "—" : p.age) +
-                  " · " + (p.class || "—");
+                  " · " + (p.class || "—") +
+                  (p.email ? " · " + p.email : "") +
+                  (p.phone ? " · " + p.phone : "");
+                const ph = fileLink("photo", p.photo);
+                if (ph) li.append(" ", ph);
                 return li;
               }),
             );
@@ -960,6 +1043,94 @@
         $("detailClose").addEventListener("click", () =>
           $("detailModal").close(),
         );
+
+        // ---------------------------------------------------------- study guides
+        const GUIDE_REALMS = [
+          ["pure", "Project Nexus"], ["business", "Gaia's Exchange"],
+          ["math", "The Cartesian Realm"], ["bio", "The Watson Street"],
+          ["chem", "Curie's Chamber"], ["physics", "Astral Axiom"],
+          ["cs", "Hypatia's Enclave"], ["psych", "Pterion's Sanctum"],
+          ["film", "The Joker's Act"], ["law", "Athena's Bench"],
+          ["robotics", "Theseus' Circuit"],
+        ];
+
+        function renderGuides() {
+          const current = new Map(
+            content.map((r) => [r.key, r.value]),
+          );
+          $("guideRows").replaceChildren(
+            ...GUIDE_REALMS.map(([key, name]) => {
+              const url = current.get("realm." + key + ".guide") || "";
+              const row = document.createElement("div");
+              row.className = "guide-row";
+
+              const title = document.createElement("b");
+              title.textContent = name;
+
+              const file = document.createElement("input");
+              file.type = "file";
+              file.accept = "application/pdf";
+
+              const state = document.createElement("span");
+              state.className = url ? "has" : "none";
+              state.textContent = url ? "Uploaded" : "Not uploaded";
+
+              const btn = document.createElement("button");
+              btn.className = "action-btn";
+              btn.type = "button";
+              btn.textContent = url ? "Replace" : "Upload";
+              btn.addEventListener("click", async () => {
+                const f = file.files[0];
+                if (!f) return say($("guideMsg"), "Choose a PDF first.", false);
+                btn.disabled = true;
+                say($("guideMsg"), "Uploading " + name + "…", true);
+                try {
+                  const body = new FormData();
+                  body.append("realm", key);
+                  body.append("guide", f);
+                  const r = await fetch(api("/api/admin/guide"), {
+                    method: "POST",
+                    headers: { Authorization: "Bearer " + token },
+                    body,
+                  });
+                  const d = await r.json().catch(() => ({}));
+                  if (!r.ok) throw new Error(d.error || "Upload failed.");
+                  say($("guideMsg"), name + " uploaded. It is live on the realm page.", true);
+                  await loadContent();
+                } catch (e) {
+                  say($("guideMsg"), e.message, false);
+                } finally {
+                  btn.disabled = false;
+                }
+              });
+
+              row.append(title, file, state, btn);
+
+              if (url) {
+                const rm = document.createElement("button");
+                rm.className = "action-btn ghost";
+                rm.type = "button";
+                rm.textContent = "Remove";
+                rm.addEventListener("click", async () => {
+                  if (!confirm("Remove the study guide for " + name + "?")) return;
+                  try {
+                    const r = await fetch(
+                      api("/api/admin/guide?realm=" + encodeURIComponent(key)),
+                      { method: "DELETE", headers: { Authorization: "Bearer " + token } },
+                    );
+                    if (!r.ok) throw new Error("Could not remove it.");
+                    say($("guideMsg"), name + " guide removed.", true);
+                    await loadContent();
+                  } catch (e) {
+                    say($("guideMsg"), e.message, false);
+                  }
+                });
+                row.append(rm);
+              }
+              return row;
+            }),
+          );
+        }
 
         // ---------------------------------------------------------- search
         $("searchInput").addEventListener("input", (e) => {
@@ -1098,6 +1269,7 @@
             content = data.content || [];
             edits = {};
             renderEditor();
+            renderGuides();
             paintSwitch();
             markDirty();
           } catch (err) {

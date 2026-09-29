@@ -1008,6 +1008,15 @@ const rsicContentReady = (async () => {
       const v = content[el.dataset.cms];
       if (v != null && v !== "") rsicSetText(el, v);
     });
+    // links that only exist once a file has been uploaded, e.g. study guides
+    document.querySelectorAll("[data-cms-href]").forEach((el) => {
+      const v = content[el.dataset.cmsHref];
+      if (v != null && v !== "") {
+        el.href = v;
+        el.hidden = false;
+      }
+    });
+
     // photos: set the src and reveal the image, otherwise the initials stay
     document.querySelectorAll("[data-cms-img]").forEach((el) => {
       const v = content[el.dataset.cmsImg];
@@ -1092,18 +1101,25 @@ if (regForm) {
   optional.forEach((b) => b.addEventListener("change", paintTally));
   // One row of name, age and class per delegate. Rows are rebuilt when the
   // headcount changes, and anything already typed is carried over.
+  // a rebuilt row cannot keep a chosen file, so the files are held here by index
+  const photoFiles = [];
+
   const peopleValues = () =>
     [...peopleList.querySelectorAll(".person")].map((row) => ({
       name: row.querySelector('[data-f="name"]').value.trim(),
       age: row.querySelector('[data-f="age"]').value.trim(),
       class: row.querySelector('[data-f="class"]').value.trim(),
+      email: row.querySelector('[data-f="email"]').value.trim(),
+      phone: row.querySelector('[data-f="phone"]').value.trim(),
     }));
 
   const peopleOk = () => {
     const rows = peopleValues();
     return (
       rows.length === parseInt(delegates.value, 10) &&
-      rows.every((p) => p.name && p.age && p.class)
+      rows.every(
+        (p, i) => p.name && p.age && p.class && p.email && p.phone && photoFiles[i],
+      )
     );
   };
 
@@ -1111,11 +1127,12 @@ if (regForm) {
     const wanted = delegatesOk() ? parseInt(delegates.value, 10) : 0;
     const kept = peopleValues();
     peopleField.hidden = wanted === 0;
+    photoFiles.length = wanted;
     if (wanted === 0) return peopleList.replaceChildren();
 
     const rows = [];
     for (let i = 0; i < wanted; i++) {
-      const had = kept[i] || { name: "", age: "", class: "" };
+      const had = kept[i] || { name: "", age: "", class: "", email: "", phone: "" };
       const row = document.createElement("div");
       row.className = "person";
       row.innerHTML =
@@ -1135,10 +1152,37 @@ if (regForm) {
         i +
         'c">Class</label><input id="p' +
         i +
-        'c" data-f="class" type="text" autocomplete="off" placeholder="e.g. Grade 10"></div>';
+        'c" data-f="class" type="text" autocomplete="off" placeholder="e.g. Grade 10"></div>' +
+        '<div class="field"><label for="p' +
+        i +
+        'e">Email</label><input id="p' +
+        i +
+        'e" data-f="email" type="email" autocomplete="off"></div>' +
+        '<div class="field"><label for="p' +
+        i +
+        'p">Number</label><input id="p' +
+        i +
+        'p" data-f="phone" type="tel" autocomplete="off"></div>' +
+        '<div class="field"><label for="p' +
+        i +
+        'f">Photo</label><input id="p' +
+        i +
+        'f" data-f="photo" type="file" accept="image/jpeg,image/png,image/webp"></div>';
       row.querySelector('[data-f="name"]').value = had.name;
       row.querySelector('[data-f="age"]').value = had.age;
       row.querySelector('[data-f="class"]').value = had.class;
+      row.querySelector('[data-f="email"]').value = had.email || "";
+      row.querySelector('[data-f="phone"]').value = had.phone || "";
+      const photo = row.querySelector('[data-f="photo"]');
+      const note = document.createElement("small");
+      note.className = "person-file";
+      if (photoFiles[i]) note.textContent = photoFiles[i].name;
+      photo.parentElement.append(note);
+      photo.addEventListener("change", () => {
+        photoFiles[i] = photo.files[0] || null;
+        note.textContent = photoFiles[i] ? photoFiles[i].name : "";
+        paintSubmit();
+      });
       rows.push(row);
     }
     peopleList.replaceChildren(...rows);
@@ -1202,9 +1246,19 @@ if (regForm) {
 
     const value = (id) => (document.getElementById(id) || {}).value.trim();
     const problems = [];
+    const file = (id) => (document.getElementById(id) || {}).files?.[0] || null;
     if (!value("s-school")) problems.push("your school's name");
-    if (!value("s-contact")) problems.push("a contact person");
-    if (!value("s-email")) problems.push("a contact email");
+    if (!value("s-school-email")) problems.push("a school email");
+    if (!value("s-team")) problems.push("a team name");
+    if (!value("s-sup-name")) problems.push("the supervisor's name");
+    if (!value("s-sup-phone")) problems.push("the supervisor's number");
+    if (!value("s-sup-email")) problems.push("the supervisor's email");
+    if (!value("s-head-name")) problems.push("the head delegate's name");
+    if (!value("s-head-email")) problems.push("the head delegate's email");
+    if (!value("s-head-phone")) problems.push("the head delegate's number");
+    if (!file("s-head-photo")) problems.push("a photo of the head delegate");
+    if (!file("s-waiver")) problems.push("the waiver of liability");
+    if (!file("s-head-form")) problems.push("the head delegate form");
     if (!delegatesOk())
       problems.push(
         "between " + rules.delegatesMin + " and " + rules.delegatesMax + " delegates",
@@ -1214,7 +1268,7 @@ if (regForm) {
         "between " + rules.realmsMin + " and " + rules.realmsMax + " realms",
       );
     if (delegatesOk() && !peopleOk())
-      problems.push("a name, age and class for every delegate");
+      problems.push("a name, age, class, email, number and photo for every delegate");
 
     if (problems.length) {
       regStatus.className = "reg-status is-bad";
@@ -1229,25 +1283,41 @@ if (regForm) {
     const payload = {
       route: "school",
       school: value("s-school"),
-      contactName: value("s-contact"),
-      contactEmail: value("s-email"),
-      phone: value("s-phone"),
+      schoolEmail: value("s-school-email"),
+      teamName: value("s-team"),
+      supervisorName: value("s-sup-name"),
+      supervisorPhone: value("s-sup-phone"),
+      supervisorEmail: value("s-sup-email"),
+      headDelegate: {
+        name: value("s-head-name"),
+        email: value("s-head-email"),
+        phone: value("s-head-phone"),
+      },
       delegates: value("s-delegates"),
       realms: boxes.filter((b) => b.checked).map((b) => b.value),
       people: peopleValues(),
     };
 
+    // files ride alongside the payload in one request, so nothing is stored
+    // unless the whole registration is valid
+    const form = new FormData();
+    form.append("payload", JSON.stringify(payload));
+    form.append("waiver", file("s-waiver"));
+    form.append("headForm", file("s-head-form"));
+    form.append("photoHead", file("s-head-photo"));
+    photoFiles.forEach((f, i) => f && form.append("photo" + i, f));
+
     try {
       const res = await fetch(rsicApi("/api/register"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: form,
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         regStatus.className = "reg-status is-good";
         regStatus.textContent = data.message || "Registration received.";
         regForm.reset();
+        photoFiles.length = 0;
         buildPeople();
         paintTally();
       } else {

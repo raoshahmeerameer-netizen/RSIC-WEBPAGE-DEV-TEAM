@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
+const multer = require("multer");
 const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config({ path: __dirname + "/.env" });
 
@@ -38,6 +39,33 @@ app.use(
   }),
 );
 app.use(express.json({ limit: "64kb" }));
+
+// ---------------------------------------------------------------- uploads
+// Files never touch the disk. They are held in memory just long enough to be
+// checked and pushed into Supabase Storage.
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const DOC_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const MAX_FILE = 5 * 1024 * 1024;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE, files: 24, fields: 40, parts: 80 },
+});
+
+const EXT = {
+  "image/jpeg": "jpg", "image/png": "png",
+  "image/webp": "webp", "application/pdf": "pdf",
+};
+
+// Supabase also enforces the bucket's own mime allow-list, so a forged
+// Content-Type still cannot land something unexpected in the bucket.
+const putFile = async (bucket, path, file) => {
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(path, file.buffer, { contentType: file.mimetype, upsert: false });
+  if (error) throw new Error("upload failed: " + error.message);
+  return path;
+};
 
 // ---------------------------------------------------------------- admin sessions
 // Tokens live in memory, so restarting the server signs every admin out.
@@ -163,8 +191,26 @@ const REALM_KEYS = [
   "psych","business","film","law","robotics",
 ];
 
-app.post("/api/register", async (req, res) => {
+app.post("/api/register", upload.any(), async (req, res) => {
   try {
+    // the form sends everything else as one JSON field alongside the files
+    if (typeof req.body.payload === "string") {
+      try {
+        req.body = { ...req.body, ...JSON.parse(req.body.payload) };
+      } catch (e) {
+        return res.status(400).json({ error: "Could not read the form." });
+      }
+    }
+    const byField = new Map((req.files || []).map((f) => [f.fieldname, f]));
+    const needFile = (field, label, types) => {
+      const f = byField.get(field);
+      if (!f) throw new Error(label + " is required.");
+      if (!types.includes(f.mimetype))
+        throw new Error(
+          label + " must be " + (types === PHOTO_TYPES ? "a JPG, PNG or WebP image" : "a PDF or image") + ".",
+        );
+      return f;
+    };
     const content = await loadContent();
     if ((content["registration.open"] || "off").toLowerCase() !== "on") {
       return res.status(403).json({
@@ -198,11 +244,13 @@ app.post("/api/register", async (req, res) => {
     const { school, contactName, contactEmail, phone, delegates } =
       req.body || {};
 
-    if (!school || !contactEmail)
+    // the supervisor's email replaced the old "contact email" field
+    const primaryEmail = contactEmail || (req.body && req.body.supervisorEmail);
+    if (!school || !primaryEmail)
       return res
         .status(400)
-        .json({ error: "School name and contact email are required." });
-    if (!emailLooksReal(contactEmail))
+        .json({ error: "School name and supervisor email are required." });
+    if (!emailLooksReal(primaryEmail))
       return res.status(400).json({ error: "That email doesn't look right." });
 
     const headcount = parseInt(delegates, 10);
@@ -237,7 +285,17 @@ app.post("/api/register", async (req, res) => {
         return res
           .status(400)
           .json({ error: "That age doesn't look right: " + age + "." });
-      delegateList.push({ name, age, class: klass });
+      const pEmail = String((person && person.email) || "").trim().slice(0, 160);
+      const pPhone = String((person && person.phone) || "").trim().slice(0, 40);
+      if (!pEmail || !emailLooksReal(pEmail))
+        return res
+          .status(400)
+          .json({ error: "Every delegate needs a real email address." });
+      if (!pPhone)
+        return res
+          .status(400)
+          .json({ error: "Every delegate needs a phone number." });
+      delegateList.push({ name, age, class: klass, email: pEmail, phone: pPhone });
     }
 
     // unknown keys are dropped, duplicates collapsed, compulsory ones always added
@@ -256,12 +314,74 @@ app.post("/api/register", async (req, res) => {
       });
 
     const clip = (v, n) => (v == null ? null : String(v).trim().slice(0, n));
+
+    // supervisor, team name and head delegate
+    const b = req.body || {};
+    const head = b.headDelegate || {};
+    for (const [v, label] of [
+      [b.schoolEmail, "The school email"],
+      [b.supervisorName, "The supervisor's name"],
+      [b.supervisorPhone, "The supervisor's number"],
+      [b.supervisorEmail, "The supervisor's email"],
+      [b.teamName, "The team name"],
+      [head.name, "The head delegate's name"],
+      [head.email, "The head delegate's email"],
+      [head.phone, "The head delegate's number"],
+    ])
+      if (!String(v || "").trim())
+        return res.status(400).json({ error: label + " is required." });
+
+    for (const [v, label] of [
+      [b.schoolEmail, "school email"],
+      [b.supervisorEmail, "supervisor email"],
+      [head.email, "head delegate email"],
+    ])
+      if (!emailLooksReal(v))
+        return res.status(400).json({ error: "That " + label + " doesn't look right." });
+
+    // files: the two documents, the head delegate's photo and one per delegate
+    let folder, waiverPath, headFormPath, headPhoto;
+    try {
+      folder = crypto.randomUUID();
+      const waiver = needFile("waiver", "The waiver of liability", DOC_TYPES);
+      const headForm = needFile("headForm", "The head delegate form", DOC_TYPES);
+      const hPhoto = needFile("photoHead", "The head delegate's photo", PHOTO_TYPES);
+      for (let i = 0; i < headcount; i++)
+        needFile("photo" + i, "A photo for delegate " + (i + 1), PHOTO_TYPES);
+
+      waiverPath = await putFile("registration-files", folder + "/waiver." + EXT[waiver.mimetype], waiver);
+      headFormPath = await putFile("registration-files", folder + "/head-form." + EXT[headForm.mimetype], headForm);
+      headPhoto = await putFile("registration-files", folder + "/head-photo." + EXT[hPhoto.mimetype], hPhoto);
+      for (let i = 0; i < headcount; i++) {
+        const f = byField.get("photo" + i);
+        delegateList[i].photo = await putFile(
+          "registration-files", folder + "/delegate-" + (i + 1) + "." + EXT[f.mimetype], f,
+        );
+      }
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+
     const payload = {
       route: "school",
       school: clip(school, 160),
-      contact_name: clip(contactName, 120),
-      contact_email: clip(contactEmail, 160),
-      phone: clip(phone, 40),
+      school_email: clip(b.schoolEmail, 160),
+      team_name: clip(b.teamName, 120),
+      supervisor_name: clip(b.supervisorName, 120),
+      supervisor_phone: clip(b.supervisorPhone, 40),
+      supervisor_email: clip(b.supervisorEmail, 160),
+      head_delegate: {
+        name: clip(head.name, 120),
+        email: clip(head.email, 160),
+        phone: clip(head.phone, 40),
+        photo: headPhoto,
+      },
+      waiver_path: waiverPath,
+      head_form_path: headFormPath,
+      files_folder: folder,
+      contact_name: clip(contactName || b.supervisorName, 120),
+      contact_email: clip(contactEmail || b.supervisorEmail, 160),
+      phone: clip(phone || b.supervisorPhone, 40),
       delegates: headcount,
       delegate_list: delegateList,
       realms,
@@ -320,6 +440,85 @@ app.delete("/api/registrations/:id", requireAdmin, async (req, res) => {
     .eq("id", req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------- files
+// Registration files are in a PRIVATE bucket. There is no public URL for
+// them. An admin gets a link that works for 60 seconds and nobody else can
+// reach them at all.
+app.get("/api/admin/file", requireAdmin, async (req, res) => {
+  const path = String(req.query.path || "");
+  // only ever inside the bucket, never a traversal or an absolute path
+  if (!/^[0-9a-f-]{36}\/[a-z0-9-]+\.(jpg|png|webp|pdf)$/i.test(path))
+    return res.status(400).json({ error: "Bad path." });
+  const { data, error } = await supabase.storage
+    .from("registration-files")
+    .createSignedUrl(path, 60);
+  if (error || !data)
+    return res.status(404).json({ error: "File not found." });
+  res.redirect(data.signedUrl);
+});
+
+// Study guides are meant to be downloaded by delegates, so they sit in a
+// public bucket. The admin uploads one per realm and the realm page shows a
+// download button once the key has a value.
+app.post("/api/admin/guide", requireAdmin, upload.single("guide"), async (req, res) => {
+  const realm = String(req.body.realm || "");
+  if (!REALM_KEYS.includes(realm))
+    return res.status(400).json({ error: "Unknown realm." });
+  if (!req.file) return res.status(400).json({ error: "No file." });
+  if (req.file.mimetype !== "application/pdf")
+    return res.status(400).json({ error: "The study guide must be a PDF." });
+
+  const path = realm + ".pdf";
+  const { error } = await supabase.storage
+    .from("study-guides")
+    .upload(path, req.file.buffer, { contentType: "application/pdf", upsert: true });
+  if (error) return res.status(500).json({ error: error.message });
+
+  const { data } = supabase.storage.from("study-guides").getPublicUrl(path);
+  const url = data.publicUrl + "?v=" + Date.now();
+  const { error: e2 } = await supabase
+    .from("site_content")
+    .upsert(
+      {
+        key: "realm." + realm + ".guide",
+        value: url,
+        label: "Study guide (PDF)",
+        category: "Study guides",
+        input: "text",
+        position: 1,
+      },
+      { onConflict: "key" },
+    );
+  if (e2) return res.status(500).json({ error: e2.message });
+  await loadContent(true);
+  res.json({ ok: true, url });
+});
+
+app.delete("/api/admin/guide", requireAdmin, async (req, res) => {
+  const realm = String(req.query.realm || "");
+  if (!REALM_KEYS.includes(realm))
+    return res.status(400).json({ error: "Unknown realm." });
+  await supabase.storage.from("study-guides").remove([realm + ".pdf"]);
+  await supabase
+    .from("site_content")
+    .update({ value: "" })
+    .eq("key", "realm." + realm + ".guide");
+  await loadContent(true);
+  res.json({ ok: true });
+});
+
+// multer's own errors are not friendly, so translate the ones people hit
+app.use((err, _req, res, next) => {
+  if (err && err.name === "MulterError") {
+    const msg =
+      err.code === "LIMIT_FILE_SIZE"
+        ? "That file is too big. Each file must be 5 MB or less."
+        : "There was a problem with the files you attached.";
+    return res.status(400).json({ error: msg });
+  }
+  return next(err);
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
