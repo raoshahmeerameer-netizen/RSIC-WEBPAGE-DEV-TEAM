@@ -685,3 +685,10 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .person{grid-template-columns:36px repeat(3,minmax(0,1fr))}
 @media (max-width:760px){.person{grid-template-columns:36px minmax(0,1fr)}}
+
+
+/* ---- forms to download on the register page ---- */
+.form-downloads{display:flex;flex-wrap:wrap;gap:12px}
+.form-downloads .btn[hidden]{display:none}
+.form-downloads-none{margin:0;color:var(--text-soft)}
+.form-downloads-none[hidden]{display:none}

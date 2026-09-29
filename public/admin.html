@@ -543,6 +543,22 @@
         </section>
 
         <!-- content editor -->
+        <section aria-label="Event forms">
+          <div class="section-head">
+            <div>
+              <p class="label">For schools to download</p>
+              <h2>Event <em>forms.</em></h2>
+            </div>
+            <p>
+              Upload the blank PDFs here and a download button appears on the
+              register page. Schools print them, sign them and bring them.
+              Nothing is uploaded by them when they register.
+            </p>
+          </div>
+          <div id="docRows" class="guide-rows"></div>
+          <p class="reg-status" id="docMsg" role="status"></p>
+        </section>
+
         <section aria-label="Study guides">
           <div class="section-head">
             <div>
@@ -1002,8 +1018,6 @@
 
           // the documents, opened through the admin-only route
           const docs = [
-            fileLink("Waiver of liability", row.waiver_path),
-            fileLink("Head delegate form", row.head_form_path),
             fileLink("Head delegate photo", head.photo),
           ].filter(Boolean);
           const docBox = $("detailFiles");
@@ -1043,6 +1057,88 @@
         $("detailClose").addEventListener("click", () =>
           $("detailModal").close(),
         );
+
+        // ---------------------------------------------------------- event forms
+        const EVENT_FORMS = [
+          ["waiver", "Waiver of liability", "docs.waiver"],
+          ["head_form", "Head delegate form", "docs.head_form"],
+          ["delegate_form", "Delegate form", "docs.delegate_form"],
+        ];
+
+        function renderDocs() {
+          const current = new Map(content.map((r) => [r.key, r.value]));
+          $("docRows").replaceChildren(
+            ...EVENT_FORMS.map(([which, name, key]) => {
+              const url = current.get(key) || "";
+              const row = document.createElement("div");
+              row.className = "guide-row";
+
+              const title = document.createElement("b");
+              title.textContent = name;
+
+              const file = document.createElement("input");
+              file.type = "file";
+              file.accept = "application/pdf";
+
+              const state = document.createElement("span");
+              state.className = url ? "has" : "none";
+              state.textContent = url ? "Uploaded" : "Not uploaded";
+
+              const btn = document.createElement("button");
+              btn.className = "action-btn";
+              btn.type = "button";
+              btn.textContent = url ? "Replace" : "Upload";
+              btn.addEventListener("click", async () => {
+                const f = file.files[0];
+                if (!f) return say($("docMsg"), "Choose a PDF first.", false);
+                btn.disabled = true;
+                say($("docMsg"), "Uploading " + name + "…", true);
+                try {
+                  const body = new FormData();
+                  body.append("which", which);
+                  body.append("doc", f);
+                  const r = await fetch(api("/api/admin/document"), {
+                    method: "POST",
+                    headers: { Authorization: "Bearer " + token },
+                    body,
+                  });
+                  const d = await r.json().catch(() => ({}));
+                  if (!r.ok) throw new Error(d.error || "Upload failed.");
+                  say($("docMsg"), name + " uploaded. It is on the register page now.", true);
+                  await loadContent();
+                } catch (e) {
+                  say($("docMsg"), e.message, false);
+                } finally {
+                  btn.disabled = false;
+                }
+              });
+              row.append(title, file, state, btn);
+
+              if (url) {
+                const rm = document.createElement("button");
+                rm.className = "action-btn ghost";
+                rm.type = "button";
+                rm.textContent = "Remove";
+                rm.addEventListener("click", async () => {
+                  if (!confirm("Remove the " + name + "?")) return;
+                  try {
+                    const r = await fetch(
+                      api("/api/admin/document?which=" + encodeURIComponent(which)),
+                      { method: "DELETE", headers: { Authorization: "Bearer " + token } },
+                    );
+                    if (!r.ok) throw new Error("Could not remove it.");
+                    say($("docMsg"), name + " removed.", true);
+                    await loadContent();
+                  } catch (e) {
+                    say($("docMsg"), e.message, false);
+                  }
+                });
+                row.append(rm);
+              }
+              return row;
+            }),
+          );
+        }
 
         // ---------------------------------------------------------- study guides
         const GUIDE_REALMS = [
@@ -1270,6 +1366,7 @@
             edits = {};
             renderEditor();
             renderGuides();
+            renderDocs();
             paintSwitch();
             markDirty();
           } catch (err) {

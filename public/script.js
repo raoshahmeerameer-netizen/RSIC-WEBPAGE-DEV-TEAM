@@ -1032,6 +1032,12 @@ const rsicContentReady = (async () => {
         if (box) box.classList.add("has-photo");
       }
     });
+    const noneNote = document.getElementById("formsNone");
+    if (noneNote)
+      noneNote.hidden = [...document.querySelectorAll("[data-cms-href]")].some(
+        (el) => !el.hidden,
+      );
+
     window.RSIC_CONTENT = content;
     document.dispatchEvent(new CustomEvent("rsic:content", { detail: content }));
     return content;
@@ -1112,8 +1118,6 @@ if (regForm) {
   const peopleValues = () =>
     [...peopleList.querySelectorAll(".person")].map((row) => ({
       name: row.querySelector('[data-f="name"]').value.trim(),
-      age: row.querySelector('[data-f="age"]').value.trim(),
-      class: row.querySelector('[data-f="class"]').value.trim(),
       email: row.querySelector('[data-f="email"]').value.trim(),
       phone: row.querySelector('[data-f="phone"]').value.trim(),
     }));
@@ -1121,15 +1125,14 @@ if (regForm) {
   const peopleOk = () => {
     const rows = peopleValues();
     return (
-      rows.length === parseInt(delegates.value, 10) &&
-      rows.every(
-        (p, i) => p.name && p.age && p.class && p.email && p.phone && photoFiles[i],
-      )
+      rows.length === Math.max(0, parseInt(delegates.value, 10) - 1) &&
+      rows.every((p, i) => p.name && p.email && p.phone && photoFiles[i])
     );
   };
 
   const buildPeople = () => {
-    const wanted = delegatesOk() ? parseInt(delegates.value, 10) : 0;
+    // the head delegate is collected above, so these are the others
+    const wanted = delegatesOk() ? parseInt(delegates.value, 10) - 1 : 0;
     const kept = peopleValues();
     peopleField.hidden = wanted === 0;
     photoFiles.length = wanted;
@@ -1137,27 +1140,17 @@ if (regForm) {
 
     const rows = [];
     for (let i = 0; i < wanted; i++) {
-      const had = kept[i] || { name: "", age: "", class: "", email: "", phone: "" };
+      const had = kept[i] || { name: "", email: "", phone: "" };
       const row = document.createElement("div");
       row.className = "person";
       row.innerHTML =
         '<span class="person-n">' +
-        (i + 1) +
+        (i + 2) +
         '</span><div class="field"><label for="p' +
         i +
         'n">Full name</label><input id="p' +
         i +
         'n" data-f="name" type="text" autocomplete="off"></div>' +
-        '<div class="field"><label for="p' +
-        i +
-        'a">Age</label><input id="p' +
-        i +
-        'a" data-f="age" type="number" inputmode="numeric" min="8" max="25"></div>' +
-        '<div class="field"><label for="p' +
-        i +
-        'c">Class</label><input id="p' +
-        i +
-        'c" data-f="class" type="text" autocomplete="off" placeholder="e.g. Grade 10"></div>' +
         '<div class="field"><label for="p' +
         i +
         'e">Email</label><input id="p' +
@@ -1174,8 +1167,6 @@ if (regForm) {
         i +
         'f" data-f="photo" type="file" accept="image/jpeg,image/png,image/webp"></div>';
       row.querySelector('[data-f="name"]').value = had.name;
-      row.querySelector('[data-f="age"]').value = had.age;
-      row.querySelector('[data-f="class"]').value = had.class;
       row.querySelector('[data-f="email"]').value = had.email || "";
       row.querySelector('[data-f="phone"]').value = had.phone || "";
       const photo = row.querySelector('[data-f="photo"]');
@@ -1262,8 +1253,7 @@ if (regForm) {
     if (!value("s-head-email")) problems.push("the head delegate's email");
     if (!value("s-head-phone")) problems.push("the head delegate's number");
     if (!file("s-head-photo")) problems.push("a photo of the head delegate");
-    if (!file("s-waiver")) problems.push("the waiver of liability");
-    if (!file("s-head-form")) problems.push("the head delegate form");
+
     if (!delegatesOk())
       problems.push(
         "between " + rules.delegatesMin + " and " + rules.delegatesMax + " delegates",
@@ -1273,7 +1263,7 @@ if (regForm) {
         "between " + rules.realmsMin + " and " + rules.realmsMax + " realms",
       );
     if (delegatesOk() && !peopleOk())
-      problems.push("a name, age, class, email, number and photo for every delegate");
+      problems.push("a name, email, number and photo for every other delegate");
 
     if (problems.length) {
       regStatus.className = "reg-status is-bad";
@@ -1307,8 +1297,6 @@ if (regForm) {
     // unless the whole registration is valid
     const form = new FormData();
     form.append("payload", JSON.stringify(payload));
-    form.append("waiver", file("s-waiver"));
-    form.append("headForm", file("s-head-form"));
     form.append("photoHead", file("s-head-photo"));
     photoFiles.forEach((f, i) => f && form.append("photo" + i, f));
 

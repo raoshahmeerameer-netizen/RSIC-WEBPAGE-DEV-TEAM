@@ -60,6 +60,21 @@
         </div>
         <p class="lede" data-cms="lede.register.1">One form, one route. Register your delegation.</p>
       </section>
+
+<section class="wrap section tight-top">
+<div class="section-head">
+<div><p class="label">Before you register</p><h2>Forms to <em>download.</em></h2></div>
+<p>Print these, sign them, and bring them with you. You do not upload them here.</p>
+</div>
+<div class="form-downloads">
+<a class="btn" data-cms-href="docs.waiver" href="#" download hidden>Waiver of liability</a>
+<a class="btn" data-cms-href="docs.head_form" href="#" download hidden>Head delegate form</a>
+<a class="btn" data-cms-href="docs.delegate_form" href="#" download hidden>Delegate form</a>
+<p class="form-downloads-none" id="formsNone">The forms will be posted here before registration opens.</p>
+</div>
+</section>
+
+
       <section class="reg">
         <div class="reg-panel">
           <form id="registrationForm" novalidate>
@@ -128,6 +143,8 @@
               <div class="field">
                 <label for="s-delegates">Number of delegates</label>
                 <input id="s-delegates" name="delegates" type="number" inputmode="numeric" min="5" max="7" required />
+                <p class="hint" id="delegatesHint">5 to 7 delegates.</p>
+                <p class="field-note">This includes the head delegate. Details for the others are asked below.</p>
               </div>
             </fieldset>
 
@@ -197,21 +214,6 @@
               </div>
 
               <p class="realm-tally" id="realmTally" role="status">2 of 8 realms chosen</p>
-            </fieldset>
-
-            <fieldset class="reg-field active">
-              <legend>Forms</legend>
-              <div class="field-row">
-                <div class="field">
-                  <label for="s-waiver">Waiver of liability</label>
-                  <input id="s-waiver" name="waiver" type="file" accept="application/pdf,image/jpeg,image/png" required />
-                </div>
-                <div class="field">
-                  <label for="s-head-form">Head delegate form</label>
-                  <input id="s-head-form" name="head_form" type="file" accept="application/pdf,image/jpeg,image/png" required />
-                </div>
-              </div>
-              <p class="field-note">PDF or a clear photo. Up to 5 MB each.</p>
             </fieldset>
 
             <button class="btn" type="submit" disabled>Opens soon</button>

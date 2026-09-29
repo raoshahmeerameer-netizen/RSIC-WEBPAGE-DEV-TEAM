@@ -266,25 +266,21 @@ app.post("/api/register", upload.any(), async (req, res) => {
 
     // one entry per delegate: name, age and class, checked here as well as in
     // the browser, because a form can be bypassed
+    // the head delegate is one of the headcount and is collected separately,
+    // so the list covers the others
+    const others = headcount - 1;
     const people = Array.isArray(req.body.people) ? req.body.people : [];
-    if (people.length !== headcount)
+    if (people.length !== others)
       return res.status(400).json({
-        error: "Give a name, age and class for each of the " + headcount + " delegates.",
+        error:
+          "Give details for the other " + others + " delegates, besides the head delegate.",
       });
 
     const delegateList = [];
     for (const person of people) {
       const name = String((person && person.name) || "").trim().slice(0, 120);
-      const klass = String((person && person.class) || "").trim().slice(0, 60);
-      const age = parseInt(person && person.age, 10);
-      if (!name || !klass || !Number.isFinite(age))
-        return res
-          .status(400)
-          .json({ error: "Every delegate needs a name, an age and a class." });
-      if (age < 5 || age > 30)
-        return res
-          .status(400)
-          .json({ error: "That age doesn't look right: " + age + "." });
+      if (!name)
+        return res.status(400).json({ error: "Every delegate needs a name." });
       const pEmail = String((person && person.email) || "").trim().slice(0, 160);
       const pPhone = String((person && person.phone) || "").trim().slice(0, 40);
       if (!pEmail || !emailLooksReal(pEmail))
@@ -295,7 +291,7 @@ app.post("/api/register", upload.any(), async (req, res) => {
         return res
           .status(400)
           .json({ error: "Every delegate needs a phone number." });
-      delegateList.push({ name, age, class: klass, email: pEmail, phone: pPhone });
+      delegateList.push({ name, email: pEmail, phone: pPhone });
     }
 
     // unknown keys are dropped, duplicates collapsed, compulsory ones always added
@@ -340,22 +336,18 @@ app.post("/api/register", upload.any(), async (req, res) => {
         return res.status(400).json({ error: "That " + label + " doesn't look right." });
 
     // files: the two documents, the head delegate's photo and one per delegate
-    let folder, waiverPath, headFormPath, headPhoto;
+    let folder, headPhoto;
     try {
       folder = crypto.randomUUID();
-      const waiver = needFile("waiver", "The waiver of liability", DOC_TYPES);
-      const headForm = needFile("headForm", "The head delegate form", DOC_TYPES);
       const hPhoto = needFile("photoHead", "The head delegate's photo", PHOTO_TYPES);
-      for (let i = 0; i < headcount; i++)
-        needFile("photo" + i, "A photo for delegate " + (i + 1), PHOTO_TYPES);
+      for (let i = 0; i < others; i++)
+        needFile("photo" + i, "A photo for delegate " + (i + 2), PHOTO_TYPES);
 
-      waiverPath = await putFile("registration-files", folder + "/waiver." + EXT[waiver.mimetype], waiver);
-      headFormPath = await putFile("registration-files", folder + "/head-form." + EXT[headForm.mimetype], headForm);
       headPhoto = await putFile("registration-files", folder + "/head-photo." + EXT[hPhoto.mimetype], hPhoto);
-      for (let i = 0; i < headcount; i++) {
+      for (let i = 0; i < others; i++) {
         const f = byField.get("photo" + i);
         delegateList[i].photo = await putFile(
-          "registration-files", folder + "/delegate-" + (i + 1) + "." + EXT[f.mimetype], f,
+          "registration-files", folder + "/delegate-" + (i + 2) + "." + EXT[f.mimetype], f,
         );
       }
     } catch (e) {
@@ -376,8 +368,6 @@ app.post("/api/register", upload.any(), async (req, res) => {
         phone: clip(head.phone, 40),
         photo: headPhoto,
       },
-      waiver_path: waiverPath,
-      head_form_path: headFormPath,
       files_folder: folder,
       contact_name: clip(contactName || b.supervisorName, 120),
       contact_email: clip(contactEmail || b.supervisorEmail, 160),
@@ -494,6 +484,47 @@ app.post("/api/admin/guide", requireAdmin, upload.single("guide"), async (req, r
   if (e2) return res.status(500).json({ error: e2.message });
   await loadContent(true);
   res.json({ ok: true, url });
+});
+
+// The three blank forms schools download. Public, like the study guides.
+const FORM_KEYS = {
+  waiver: "docs.waiver",
+  head_form: "docs.head_form",
+  delegate_form: "docs.delegate_form",
+};
+
+app.post("/api/admin/document", requireAdmin, upload.single("doc"), async (req, res) => {
+  const which = String(req.body.which || "");
+  if (!FORM_KEYS[which])
+    return res.status(400).json({ error: "Unknown form." });
+  if (!req.file) return res.status(400).json({ error: "No file." });
+  if (req.file.mimetype !== "application/pdf")
+    return res.status(400).json({ error: "The form must be a PDF." });
+
+  const path = which + ".pdf";
+  const { error } = await supabase.storage
+    .from("event-forms")
+    .upload(path, req.file.buffer, { contentType: "application/pdf", upsert: true });
+  if (error) return res.status(500).json({ error: error.message });
+
+  const { data } = supabase.storage.from("event-forms").getPublicUrl(path);
+  const url = data.publicUrl + "?v=" + Date.now();
+  const { error: e2 } = await supabase
+    .from("site_content")
+    .update({ value: url })
+    .eq("key", FORM_KEYS[which]);
+  if (e2) return res.status(500).json({ error: e2.message });
+  await loadContent(true);
+  res.json({ ok: true, url });
+});
+
+app.delete("/api/admin/document", requireAdmin, async (req, res) => {
+  const which = String(req.query.which || "");
+  if (!FORM_KEYS[which]) return res.status(400).json({ error: "Unknown form." });
+  await supabase.storage.from("event-forms").remove([which + ".pdf"]);
+  await supabase.from("site_content").update({ value: "" }).eq("key", FORM_KEYS[which]);
+  await loadContent(true);
+  res.json({ ok: true });
 });
 
 app.delete("/api/admin/guide", requireAdmin, async (req, res) => {
