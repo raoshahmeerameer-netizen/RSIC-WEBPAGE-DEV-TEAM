@@ -618,6 +618,9 @@ const sendPage = (res, file) => res.sendFile(path.join(SITE_DIR, file));
 // The dashboard answers at /admindashboard and nowhere else. Nothing on the
 // site links to it; you reach it by typing the address.
 app.get("/admindashboard", (_req, res) => sendPage(res, "admin.html"));
+app.get("/admindashboard/advanced", (_req, res) =>
+  sendPage(res, "advanced.html"),
+);
 app.get(["/admin", "/admin.html", "/admindashboard.html"], (_req, res) =>
   res.redirect(301, "/admindashboard"),
 );

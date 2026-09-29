@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Advanced editor — RSIC 2026</title>
+    <meta name="description" content="Click any text on the live preview and change it." />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png" />
+    <meta name="theme-color" content="#040b1a" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .adv-bar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 18px;
+        padding: 14px clamp(16px, 3vw, 28px);
+        background: rgba(4, 11, 26, 0.92);
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(243, 238, 232, 0.08);
+      }
+      .adv-bar h1 {
+        margin: 0;
+        font: 700 1.2rem/1 var(--display);
+        letter-spacing: 0.06em;
+      }
+      .adv-bar .spacer {
+        flex: 1;
+      }
+      .adv-hint {
+        margin: 0;
+        font: 500 0.82rem/1.4 var(--sans);
+        color: var(--text-soft);
+      }
+      .adv-wrap {
+        display: grid;
+        grid-template-columns: 210px minmax(0, 1fr) 0px;
+        gap: 14px;
+        padding: 14px clamp(16px, 3vw, 28px) 28px;
+        align-items: start;
+        transition: grid-template-columns 0.25s ease;
+      }
+      .adv-wrap.editing {
+        grid-template-columns: 210px minmax(0, 1fr) 330px;
+      }
+      .adv-pages {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+      .adv-page {
+        text-align: left;
+        padding: 9px 12px;
+        border: 0;
+        border-radius: 9px;
+        cursor: pointer;
+        background: transparent;
+        color: var(--text-soft);
+        font: 600 0.84rem/1.2 var(--sans);
+      }
+      .adv-page:hover {
+        background: var(--surface-2);
+        color: var(--text);
+      }
+      .adv-page.active {
+        background: var(--pink);
+        color: var(--on-pink);
+      }
+      .adv-frame-box {
+        border-radius: 14px;
+        overflow: hidden;
+        background: #040b1a;
+        border: 1px solid rgba(243, 238, 232, 0.1);
+      }
+      #advFrame {
+        display: block;
+        width: 100%;
+        height: 78vh;
+        border: 0;
+      }
+      .adv-editor {
+        position: sticky;
+        top: 80px;
+        padding: 18px;
+        border-radius: 14px;
+        background: var(--surface);
+        overflow: hidden;
+      }
+      .adv-wrap:not(.editing) .adv-editor {
+        display: none;
+      }
+      .adv-editor small {
+        display: block;
+        font: 600 0.74rem/1.3 var(--sans);
+        color: var(--pink);
+        margin-bottom: 8px;
+        word-break: break-all;
+      }
+      .adv-editor textarea {
+        width: 100%;
+        min-height: 150px;
+        resize: vertical;
+      }
+      .adv-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .adv-msg {
+        margin: 10px 0 0;
+        font: 500 0.8rem/1.4 var(--sans);
+        min-height: 1.2em;
+      }
+      .adv-msg.good {
+        color: var(--pink-light);
+      }
+      .adv-msg.bad {
+        color: #ff9d9d;
+      }
+      .adv-gate {
+        max-width: 460px;
+        margin: 14vh auto;
+        padding: 30px;
+        border-radius: 16px;
+        background: var(--surface);
+        text-align: center;
+      }
+      @media (max-width: 900px) {
+        .adv-wrap,
+        .adv-wrap.editing {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .adv-pages {
+          flex-direction: row;
+          flex-wrap: wrap;
+          max-height: none;
+        }
+        .adv-editor {
+          position: static;
+        }
+        #advFrame {
+          height: 60vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="gate" class="adv-gate" hidden>
+      <h1>Not signed in</h1>
+      <p>
+        Sign in on the dashboard first, then come back. This page uses the same
+        session.
+      </p>
+      <a class="btn" href="/admindashboard">Go to the dashboard</a>
+    </div>
+
+    <div id="app" hidden>
+      <header class="adv-bar">
+        <h1>Advanced editor</h1>
+        <p class="adv-hint" id="advCount">
+          Click any text on the preview to change it.
+        </p>
+        <span class="spacer"></span>
+        <a class="action-btn ghost" href="/admindashboard">Back to dashboard</a>
+      </header>
+
+      <div class="adv-wrap" id="advWrap">
+        <nav class="adv-pages" id="advPages" aria-label="Pages"></nav>
+
+        <div class="adv-frame-box">
+          <iframe id="advFrame" title="Live preview of the page you are editing"></iframe>
+        </div>
+
+        <aside class="adv-editor" id="advEditor" aria-label="Edit text">
+          <small id="advKey"></small>
+          <div class="field">
+            <label for="advValue">Text</label>
+            <textarea id="advValue"></textarea>
+          </div>
+          <p class="adv-hint">
+            Put stars around a phrase to make it italic pink, like Eleven
+            worlds. *One event.*
+          </p>
+          <div class="adv-actions">
+            <button class="action-btn" type="button" id="advSave">Save</button>
+            <button class="action-btn ghost" type="button" id="advCancel">
+              Cancel
+            </button>
+          </div>
+          <p class="adv-msg" id="advMsg" role="status"></p>
+        </aside>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const $ = (id) => document.getElementById(id);
+        const token = sessionStorage.getItem("rsic_admin_token") || "";
+        if (!token) {
+          $("gate").hidden = false;
+          return;
+        }
+        $("app").hidden = false;
+
+        const API = (p) =>
+          (location.hostname === "localhost" ? "http://localhost:5000" : "") + p;
+
+        const PAGES = [
+          ["Home", "/"],
+          ["About", "/about"],
+          ["Realms", "/realms"],
+          ["Experience", "/experience"],
+          ["Team", "/team"],
+          ["Code of Conduct", "/conduct"],
+          ["Updates", "/updates"],
+          ["Media", "/media"],
+          ["Register", "/register"],
+          ["Realm: Project Nexus", "/realms/nexus"],
+          ["Realm: Gaia's Exchange", "/realms/gaias-exchange"],
+          ["Realm: Cartesian", "/realms/cartesian"],
+          ["Realm: Watson Street", "/realms/watson-street"],
+          ["Realm: Curie's Chamber", "/realms/curies-chamber"],
+          ["Realm: Astral Axiom", "/realms/astral-axiom"],
+          ["Realm: Hypatia's Enclave", "/realms/hypatias-enclave"],
+          ["Realm: Pterion's Sanctum", "/realms/pterions-sanctum"],
+          ["Realm: Joker's Act", "/realms/jokers-act"],
+          ["Realm: Athena's Bench", "/realms/athenas-bench"],
+          ["Realm: Theseus' Circuit", "/realms/theseus-circuit"],
+          ["Team: Khadija Akbar", "/team/khadija-akbar"],
+          ["Team: Syeda Sabika Ali", "/team/syeda-sabika-ali"],
+          ["Team: Ilma Fatima", "/team/ilma-fatima"],
+          ["Team: Alizah Fatima Kazmi", "/team/alizah-fatima-kazmi"],
+          ["Team: Zayna Fatima", "/team/zayna-fatima"],
+          ["Team: Laveazay Qasim Khan", "/team/laveazay-qasim-khan"],
+          ["Team: Hussain Khan", "/team/hussain-khan"],
+          ["Team: Meerab Hassan", "/team/meerab-hassan"],
+        ];
+
+        let content = {};
+        let current = null;
+
+        async function loadContent() {
+          const r = await fetch(API("/api/content"));
+          const d = await r.json();
+          content = d.content || {};
+        }
+
+        function say(msg, good) {
+          const el = $("advMsg");
+          el.textContent = msg;
+          el.className = "adv-msg " + (good ? "good" : "bad");
+        }
+
+        function closeEditor() {
+          current = null;
+          $("advWrap").classList.remove("editing");
+          say("", true);
+        }
+
+        function openEditor(key) {
+          current = key;
+          $("advKey").textContent = key;
+          $("advValue").value = content[key] != null ? content[key] : "";
+          $("advWrap").classList.add("editing");
+          say("", true);
+          $("advValue").focus();
+        }
+
+        function wireFrame() {
+          const doc = $("advFrame").contentDocument;
+          if (!doc) return;
+
+          const style = doc.createElement("style");
+          style.textContent =
+            "[data-cms]{outline:1px dashed rgba(208,118,143,.55);outline-offset:3px;cursor:pointer}" +
+            "[data-cms]:hover{outline:2px solid #d0768f;background:rgba(208,118,143,.12)}" +
+            "[data-cms].adv-live{outline:2px solid #e7a3b6}";
+          doc.head.appendChild(style);
+
+          doc.addEventListener(
+            "click",
+            (e) => {
+              const el = e.target.closest("[data-cms]");
+              const link = e.target.closest("a");
+              if (el || link) {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+              if (!el) return;
+              doc
+                .querySelectorAll("[data-cms].adv-live")
+                .forEach((n) => n.classList.remove("adv-live"));
+              el.classList.add("adv-live");
+              openEditor(el.dataset.cms);
+            },
+            true,
+          );
+
+          const n = doc.querySelectorAll("[data-cms]").length;
+          $("advCount").textContent =
+            n + " editable pieces of text on this page. Click one to change it.";
+        }
+
+        function show(path, btn) {
+          document
+            .querySelectorAll(".adv-page")
+            .forEach((b) => b.classList.toggle("active", b === btn));
+          closeEditor();
+          $("advFrame").src = path + "?adv=" + Date.now();
+        }
+
+        $("advFrame").addEventListener("load", wireFrame);
+
+        $("advPages").replaceChildren(
+          ...PAGES.map(([label, path], i) => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "adv-page" + (i === 0 ? " active" : "");
+            b.textContent = label;
+            b.addEventListener("click", () => show(path, b));
+            return b;
+          }),
+        );
+
+        $("advCancel").addEventListener("click", closeEditor);
+
+        $("advSave").addEventListener("click", async () => {
+          if (!current) return;
+          const value = $("advValue").value;
+          $("advSave").disabled = true;
+          say("Saving...", true);
+          try {
+            const r = await fetch(API("/api/content"), {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+              },
+              body: JSON.stringify({ updates: { [current]: value } }),
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(d.error || "Could not save.");
+            content[current] = value;
+            say("Saved. It is live on the site.", true);
+            const f = $("advFrame");
+            f.src = f.src.replace(/([?&]adv=)\d+/, "$1" + Date.now());
+          } catch (e) {
+            say(e.message, false);
+          } finally {
+            $("advSave").disabled = false;
+          }
+        });
+
+        loadContent().then(() =>
+          show("/", document.querySelector(".adv-page")),
+        );
+      })();
+    </script>
+  </body>
+</html>
