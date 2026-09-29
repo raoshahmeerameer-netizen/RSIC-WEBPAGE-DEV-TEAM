@@ -555,7 +555,7 @@ a.tile{text-decoration:none;color:inherit}
   /* bigger wheel labels for phones; the four side labels step outward so they clear their dots */
   /* 18 units rendered at 9px on a phone. The nth-of-type nudges below were
      tuned for the old ten-spoke wheel and moved the wrong labels. */
-  .disc-wheel text,.disc-wheel tspan{font-size:26px}
+  .disc-wheel text,.disc-wheel tspan{font-size:22px}
 }
 @media (max-width:400px){
   .principles,.disc-list{grid-template-columns:1fr}
