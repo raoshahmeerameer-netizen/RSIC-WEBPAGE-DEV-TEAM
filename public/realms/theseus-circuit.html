@@ -16,15 +16,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 <header class="site-head">
 <div class="site-head-inner">
-<a class="logo" href="/" aria-label="RSIC home"><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14"/><path d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"/><path d="M72 6v30"/><path d="M111.49 11.36a15 15 0 1 0 0 19.28"/></g><circle class="dot" cx="123" cy="33" r="3.6"/></svg></a>
+<a class="logo" href="/" aria-label="RSIC home"><span class="wm" aria-hidden="true"><i>R</i><i>S</i><i>I</i><i>C</i><i class="dot">.</i></span></a>
 <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
 <nav class="site-nav" id="site-nav" aria-label="Main">
+<a href="/">Home</a>
 <a href="/about">About</a>
 <a href="/realms" aria-current="page">Realms</a>
 <a href="/experience">Experience</a>
@@ -43,8 +44,7 @@
 <p class="crumb"><a href="/realms">Realms</a><span>/</span><span><b data-cms="realm.robotics.crumb">11 Robotics</b></span></p>
 <h1 data-cms="realm.robotics.name">Theseus' Circuit</h1>
 <p class="tagline"><span data-cms="realm.robotics.tagline">Build it. Test it. Take it to the circuit.</span></p>
-<p class="realm-intro" data-cms="realm.robotics.intro">Think you can build a machine that can actually think its way out of trouble? Welcome to Theseus' Circuit, a three-round robotics challenge that takes teams from building a robot from the ground up to testing its performance and competing in an autonomous Robo Soccer finale.</p>
-<p class="realm-intro">Across three days, teams will build, tune, and compete, putting their engineering, programming, and problem-solving skills to the test. From electronics and mechanical design to sensors and autonomous control, every stage challenges teams to turn an idea into a machine that can perform when it matters.</p>
+<p class="realm-intro" data-cms="realm.robotics.intro">Think you can build a machine that can think its way out of trouble? Theseus' Circuit is a three-round robotics challenge that takes teams from building a robot from the ground up to testing its performance and competing in an autonomous Robo Soccer finale. Across three days, teams build, tune and compete. From electronics and mechanical design to sensors and autonomous control, every stage asks you to turn an idea into a machine that performs when it matters.</p>
 </div>
 <div class="glyph-panel" aria-hidden="true"><b>11</b><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M60 20V32" stroke-opacity=".5"/>
 <rect x="42" y="32" width="36" height="26" rx="4" stroke-opacity=".6"/>
@@ -57,41 +57,34 @@
 </section>
 
 <div class="facts">
-<div><small>Theme</small><p data-cms="realm.robotics.theme">Autonomous robotics</p></div>
-<div><small>Format</small><p data-cms="realm.robotics.format">Three rounds, build to Robo Soccer</p></div>
-<div><small>Team size</small><p data-cms="realm.robotics.team">Coming soon</p></div>
-<div><small>Duration</small><p data-cms="realm.robotics.duration">Across three days</p></div>
+<div><small>Category Head</small><p data-cms="realm.robotics.head">Hassan Warraich</p></div>
+<div><small>Category Co-Head</small><p data-cms="realm.robotics.cohead">Mohid Mahmud</p></div>
+<div><small>Rounds</small><p data-cms="realm.robotics.rounds_label">Three rounds across three days</p></div>
+<div><small>Delegate cap</small><p data-cms="realm.robotics.cap_label">2 to 3 delegates</p></div>
 </div>
 
-<div class="detail">
-<section><h2>The three rounds</h2><ol class="rules">
-<li>Build. Teams put a robot together from the ground up, covering electronics and mechanical design.</li>
-<li>Test. The robot is run and tuned, and its performance is measured.</li>
-<li>Robo Soccer. The finale is autonomous, so the robot plays without a hand on the controls.</li>
+<section class="rounds"><h2>The rounds</h2><ol class="round-list">
+<li>
+<div class="round-top"><b>01</b><h3 data-cms="realm.robotics.r1.name">Construction</h3></div>
+<ul class="chips"><li data-cms="realm.robotics.r1.cap">2 delegates</li><li data-cms="realm.robotics.r1.adv">Non-elimination</li></ul>
+<p data-cms="realm.robotics.r1.body">Delegates build and program a functional 2WD robot car: assembling the chassis, completing the wiring, and programming the system for basic autonomous and controlled movement. You are expected to show a working understanding of 2WD robotic systems, motor control and basic programming.</p>
+<ul class="plain"><li>Construct and assemble a fully functional 2WD robot.</li><li>Control the two motors independently.</li><li>Program the robot to move forward, backward, left and right.</li><li>Regulate and control motor speed.</li><li>Demonstrate controlled movement and manoeuvrability.</li></ul>
+</li>
+<li>
+<div class="round-top"><b>02</b><h3 data-cms="realm.robotics.r2.name">Tuning</h3></div>
+<ul class="chips"><li data-cms="realm.robotics.r2.cap">3 delegates</li><li data-cms="realm.robotics.r2.adv">Elimination. The top 4 teams move to round 3</li></ul>
+<p data-cms="realm.robotics.r2.body">An array of IR sensors is added to the cars, turning them into line-following robots. Delegates get access to the surprise track for a limited time to tune and refine. You are expected to understand IR sensors, line-following systems and PID control. Teams are judged on the maximum points achieved in the shortest time.</p>
+<ul class="plain"><li>Calibrate IR line-following sensors and interpret their values.</li><li>Detect the line's position and calculate the error from it.</li><li>Use proportional and PID control, tuning Kp, Ki and Kd.</li><li>Adjust motor speeds from sensor readings.</li><li>Handle sharp turns and corners, and recover when the line is lost.</li></ul>
+</li>
+<li>
+<div class="round-top"><b>03</b><h3 data-cms="realm.robotics.r3.name">Robo Soccer</h3></div>
+<ul class="chips"><li data-cms="realm.robotics.r3.cap">3 delegates</li><li data-cms="realm.robotics.r3.adv">The top two teams by goals scored take Winner and Runner-Up</li></ul>
+<p data-cms="realm.robotics.r3.body">The cars are modified to play football. Robots are controlled over Bluetooth, so participants should be comfortable with wireless control and accurate driving. A five-minute match takes place on a surprise course, with semi-finals and finals and randomly determined draws.</p>
+<ul class="plain"><li>If no goals are scored in five minutes, overtime runs for one minute.</li><li>If overtime is also goalless, the match is restarted.</li><li>Connect the robot to a Bluetooth controller and send movement commands wirelessly.</li><li>Control both motors, speed and accurate turning.</li><li>Detect the ball using sensors if required, then approach and push it.</li><li>Reposition quickly during the match.</li></ul>
+</li>
 </ol></section>
-<section><h2>What it asks of you</h2><ul class="plain">
-<li>Engineering and mechanical design</li>
-<li>Electronics</li>
-<li>Programming and autonomous control</li>
-<li>Sensors</li>
-<li>Problem solving when the machine misbehaves</li>
-</ul></section>
-</div>
-
-<div class="detail">
-<section><h2>Requirements</h2><ul class="plain">
-<li>Delegate ID</li>
-<li>Team registered under one account</li>
-<li>Parts and kit list: coming soon</li>
-</ul></section>
-<section><h2>Schedule &amp; materials</h2><ul class="plain">
-<li>Full timings are released with the event schedule on the Updates page.</li>
-<li>Room and stage assignments are confirmed the week of RSIC.</li>
-</ul></section>
-</div>
-
-<p class="callout"><strong>Heads up</strong>Team size, the rules and the judging criteria for this realm are published with the full realm brief, closer to the event.</p>
-
+<section class="detail-one"><h2>Equipment to bring</h2><ul class="plain"><li>Screwdrivers.</li><li>Wire cutters.</li><li>Paper cutter.</li><li>Laptops with the Arduino IDE already installed.</li></ul></section>
+<p class="callout"><strong>Heads up</strong><span data-cms="realm.robotics.callout">All additional materials are strictly prohibited. Management reserves the right to alter the rounds where applicable.</span></p>
 <section class="realm-cta">
 <div><h2><em>Enter</em> <b data-cms="realm.robotics.name">Theseus' Circuit</b></h2><p>Robotics. Add it to your delegation's realms when you register.</p></div>
 <a class="btn" href="/register?realm=robotics">Register your delegation</a>
@@ -99,17 +92,18 @@
 
 <nav class="pager" aria-label="More realms">
 <a class="prev" href="/realms/athenas-bench"><small>Previous realm</small><strong data-cms="realm.law.name">Athena's Bench</strong></a>
-<a class="next" href="/realms/cartesian"><small>Next realm</small><strong data-cms="realm.math.name">The Cartesian Realm</strong></a>
+<a class="next" href="/realms/nexus"><small>Next realm</small><strong data-cms="realm.pure.name">Project Nexus</strong></a>
 </nav>
 </main>
 
 <footer class="site-foot">
 <div class="site-foot-inner">
 <div>
-<a class="logo" href="/" aria-label="RSIC home"><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14"/><path d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"/><path d="M72 6v30"/><path d="M111.49 11.36a15 15 0 1 0 0 19.28"/></g><circle class="dot" cx="123" cy="33" r="3.6"/></svg></a>
+<a class="logo" href="/" aria-label="RSIC home"><span class="wm" aria-hidden="true"><i>R</i><i>S</i><i>I</i><i>C</i><i class="dot">.</i></span></a>
 <p>RSIC 2026 runs from <b data-cms="event.dates">Friday 13 to Sunday 15 November</b>, starting at <b data-cms="event.start_time">1:45 PM PKT</b>. Eleven realms, from maths and physics to moot court and theatre.</p>
 </div>
 <ul class="foot-links">
+<li><a href="/">Home</a></li>
 <li><a href="/about">About</a></li>
 <li><a href="/realms">Realms</a></li>
 <li><a href="/experience">Experience</a></li>

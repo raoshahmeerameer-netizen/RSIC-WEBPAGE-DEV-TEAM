@@ -16,15 +16,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 <header class="site-head">
 <div class="site-head-inner">
-<a class="logo" href="/" aria-label="RSIC home"><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14"/><path d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"/><path d="M72 6v30"/><path d="M111.49 11.36a15 15 0 1 0 0 19.28"/></g><circle class="dot" cx="123" cy="33" r="3.6"/></svg></a>
+<a class="logo" href="/" aria-label="RSIC home"><span class="wm" aria-hidden="true"><i>R</i><i>S</i><i>I</i><i>C</i><i class="dot">.</i></span></a>
 <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
 <nav class="site-nav" id="site-nav" aria-label="Main">
+<a href="/">Home</a>
 <a href="/about">About</a>
 <a href="/realms" aria-current="page">Realms</a>
 <a href="/experience">Experience</a>
@@ -40,12 +41,12 @@
 <main class="wrap realm-page">
 <section class="realm-hero">
 <div>
-<p class="crumb"><a href="/realms">Realms</a><span>/</span><span><b data-cms="realm.bio.crumb">03 Biology</b></span></p>
+<p class="crumb"><a href="/realms">Realms</a><span>/</span><span><b data-cms="realm.bio.crumb">04 Biology</b></span></p>
 <h1 data-cms="realm.bio.name">The Watson Street</h1>
-<p class="tagline"><span data-cms="realm.bio.tagline">Living systems don't wait for you.</span></p>
-<p class="realm-intro" data-cms="realm.bio.intro">The Watson Street runs practical biology under a clock. Specimen identification, case-based diagnosis, and questions that punish memorised answers over actual understanding.</p>
+<p class="tagline"><span data-cms="realm.bio.tagline">Think sharp. Investigate deeper. Solve the case.</span></p>
+<p class="realm-intro" data-cms="realm.bio.intro">Think biology is all cells, diagrams and words that make no sense? Not on Watson Street. Here you investigate a murder case yourself, where every clue matters and nothing is quite what it seems. From CCTV footage and crime-scene evidence to hidden secrets, you'll think outside the box, connect the clues and trust your instincts. Just when you think you've figured it out, a new plot twist. The case keeps changing, the clues keep coming, and your next move could change everything.</p>
 </div>
-<div class="glyph-panel" aria-hidden="true"><b>03</b><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M32 8 C55 30 65 30 88 8" stroke-opacity=".7"/>
+<div class="glyph-panel" aria-hidden="true"><b>04</b><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M32 8 C55 30 65 30 88 8" stroke-opacity=".7"/>
 <path d="M32 40 C55 62 65 62 88 40" stroke-opacity=".7"/>
 <path d="M32 72 C55 94 65 94 88 72" stroke-opacity=".7"/>
 <path d="M32 104 C55 96 65 96 88 104" stroke-opacity=".35"/>
@@ -54,42 +55,33 @@
 </section>
 
 <div class="facts">
-<div><small>Theme</small><p data-cms="realm.bio.theme">Applied biological reasoning</p></div>
-<div><small>Format</small><p data-cms="realm.bio.format">Rotational stations</p></div>
-<div><small>Team size</small><p data-cms="realm.bio.team">1 to 2</p></div>
-<div><small>Duration</small><p data-cms="realm.bio.duration">2.5 hours</p></div>
+<div><small>Category Head</small><p data-cms="realm.bio.head">Muhammad Abbas Ali Syed</p></div>
+<div><small>Category Co-Head</small><p data-cms="realm.bio.cohead">Reshmail Waheed</p></div>
+<div><small>Rounds</small><p data-cms="realm.bio.rounds_label">Three rounds</p></div>
+<div><small>Delegate cap</small><p data-cms="realm.bio.cap_label">2 delegates per team</p></div>
 </div>
 
-<div class="detail">
-<section><h2>Rules</h2><ol class="rules">
-<li>Each station has a fixed time limit. No carrying over.</li>
-<li>No phones or reference material at any station.</li>
-<li>Station order is assigned, not chosen.</li>
-<li>Partial credit given for documented reasoning, not just final answers.</li>
-<li>Contamination of specimens ends that station's attempt.</li>
+<section class="rounds"><h2>The rounds</h2><ol class="round-list">
+<li>
+<div class="round-top"><b>01</b><h3 data-cms="realm.bio.r1.name">The CCTV Footage</h3></div>
+<ul class="chips"><li data-cms="realm.bio.r1.cap">2 delegates per team</li><li data-cms="realm.bio.r1.adv">Elimination. The best 50% of teams proceed</li></ul>
+<p data-cms="realm.bio.r1.body">Your observation and attention to detail are tested through analysis of CCTV footage. Delegates extract the vital information and organise it on the worksheet provided, answering who, what, where and at what time. Footage analysis leads to the worksheet, which leads to a mapping of the events and movements you have identified.</p>
+<ul class="plain"><li>Judged on accuracy of answers.</li><li>Judged on time taken to complete the task.</li></ul>
+</li>
+<li>
+<div class="round-top"><b>02</b><h3 data-cms="realm.bio.r2.name">The Crime Scene</h3></div>
+<ul class="chips"><li data-cms="realm.bio.r2.cap">2 delegates per team</li><li data-cms="realm.bio.r2.adv">Non-elimination. All teams proceed to the final round</li></ul>
+<p data-cms="realm.bio.r2.body">Teams step into the crime scene to uncover hidden clues and piece the evidence together. Three stations follow. At Forensics you examine a body's injury marks against a reference sheet, identify the type of injury and its possible cause, and support your conclusions with evidence. At Toxicology you analyse a report to determine which substance was present. At Digital Forensics you work through messages, emails and laptop data, checking suspects' alibis for connections and inconsistencies.</p>
+<ul class="plain"><li>Teamwork, coordination, observation and analytical thinking all count.</li><li>Not every mark tells the same story.</li><li>Every message could matter. Every alibi could be questioned.</li></ul>
+</li>
+<li>
+<div class="round-top"><b>03</b><h3 data-cms="realm.bio.r3.name">The Press Conference</h3></div>
+<ul class="chips"><li data-cms="realm.bio.r3.cap">2 delegates per team</li><li data-cms="realm.bio.r3.adv">The top two teams take Winner and Runner-Up</li></ul>
+<p data-cms="realm.bio.r3.body">The investigation reaches its final stage. Using the footage and findings from Round 1 and the evidence gathered in Round 2, you construct a case: a clear, evidence-based theory connecting the forensic, toxicology, digital and investigative findings into one consistent explanation. Each team presents to the judges and defends its theory under questioning.</p>
+<ul class="plain"><li>Logical reasoning: 5 points.</li><li>Use of evidence: 5 points.</li><li>Consistency: 5 points.</li><li>Defence and response to questions: 5 points.</li><li>Total: 20 points.</li></ul>
+</li>
 </ol></section>
-<section><h2>Judging criteria</h2><ul class="bars">
-<li><div class="row"><span>Accuracy</span><b>40%</b></div><div class="track"><div class="fill" style="width:40%"></div></div></li>
-<li><div class="row"><span>Reasoning shown</span><b>30%</b></div><div class="track"><div class="fill" style="width:30%"></div></div></li>
-<li><div class="row"><span>Speed</span><b>15%</b></div><div class="track"><div class="fill" style="width:15%"></div></div></li>
-<li><div class="row"><span>Lab conduct</span><b>15%</b></div><div class="track"><div class="fill" style="width:15%"></div></div></li>
-</ul></section>
-</div>
 
-<div class="detail">
-<section><h2>Requirements</h2><ul class="plain">
-<li>Lab coat (provided if unavailable)</li>
-<li>Closed-toe shoes</li>
-<li>Delegate ID at each station</li>
-<li>Pen only. No pencil for written responses</li>
-</ul></section>
-<section><h2>Schedule &amp; materials</h2><ul class="plain">
-<li>Full timings are released with the event schedule on the Updates page.</li>
-<li>Room and stage assignments are confirmed the week of RSIC.</li>
-</ul></section>
-</div>
-
-<p class="callout"><strong>Heads up</strong>Any station involving live or preserved specimens follows a strict handling briefing given on arrival. Missing it means sitting that station out.</p>
 
 <section class="realm-cta">
 <div><h2><em>Enter</em> <b data-cms="realm.bio.name">The Watson Street</b></h2><p>Biology. Add it to your delegation's realms when you register.</p></div>
@@ -97,7 +89,7 @@
 </section>
 
 <nav class="pager" aria-label="More realms">
-<a class="prev" href="/realms/nexus"><small>Previous realm</small><strong data-cms="realm.pure.name">Project Nexus</strong></a>
+<a class="prev" href="/realms/cartesian"><small>Previous realm</small><strong data-cms="realm.math.name">The Cartesian Realm</strong></a>
 <a class="next" href="/realms/curies-chamber"><small>Next realm</small><strong data-cms="realm.chem.name">Curie's Chamber</strong></a>
 </nav>
 </main>
@@ -105,10 +97,11 @@
 <footer class="site-foot">
 <div class="site-foot-inner">
 <div>
-<a class="logo" href="/" aria-label="RSIC home"><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14"/><path d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"/><path d="M72 6v30"/><path d="M111.49 11.36a15 15 0 1 0 0 19.28"/></g><circle class="dot" cx="123" cy="33" r="3.6"/></svg></a>
+<a class="logo" href="/" aria-label="RSIC home"><span class="wm" aria-hidden="true"><i>R</i><i>S</i><i>I</i><i>C</i><i class="dot">.</i></span></a>
 <p>RSIC 2026 runs from <b data-cms="event.dates">Friday 13 to Sunday 15 November</b>, starting at <b data-cms="event.start_time">1:45 PM PKT</b>. Eleven realms, from maths and physics to moot court and theatre.</p>
 </div>
 <ul class="foot-links">
+<li><a href="/">Home</a></li>
 <li><a href="/about">About</a></li>
 <li><a href="/realms">Realms</a></li>
 <li><a href="/experience">Experience</a></li>

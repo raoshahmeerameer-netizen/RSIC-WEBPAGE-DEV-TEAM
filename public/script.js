@@ -220,11 +220,8 @@
   // (on a touch screen: when you tap it, when the menu opens, and when the footer one scrolls into view)
   const waves = new Map();
   document.querySelectorAll(".logo").forEach((logo) => {
-    const paths = [...logo.querySelectorAll("path")];
-    paths.forEach((p, i) => {
-      p.style.setProperty("--len", Math.ceil(p.getTotalLength() + 1));
-      p.style.setProperty("--i", i);
-    });
+    const letters = [...logo.querySelectorAll(".wm i:not(.dot)")];
+    letters.forEach((el, i) => el.style.setProperty("--i", i));
     const play = (name) => {
       logo.classList.remove("draw", "wave");
       void logo.getBoundingClientRect();

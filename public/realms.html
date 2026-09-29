@@ -16,15 +16,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 <header class="site-head">
 <div class="site-head-inner">
-<a class="logo" href="/" aria-label="RSIC home"><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14"/><path d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"/><path d="M72 6v30"/><path d="M111.49 11.36a15 15 0 1 0 0 19.28"/></g><circle class="dot" cx="123" cy="33" r="3.6"/></svg></a>
+<a class="logo" href="/" aria-label="RSIC home"><span class="wm" aria-hidden="true"><i>R</i><i>S</i><i>I</i><i>C</i><i class="dot">.</i></span></a>
 <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
 <nav class="site-nav" id="site-nav" aria-label="Main">
+<a href="/">Home</a>
 <a href="/about">About</a>
 <a href="/realms" aria-current="page">Realms</a>
 <a href="/experience">Experience</a>
@@ -44,30 +45,43 @@
 </section>
 <section class="wrap section tight-top">
 <div class="realm-grid">
-<a class="realm-card" href="/realms/cartesian">
-<div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M10 60H110M60 10V110" stroke-opacity=".4"/>
-<path d="M20 100 L100 20" stroke="var(--rsic-pink)" stroke-opacity=".8"/>
-<g stroke-opacity=".25"><path d="M10 20H110M10 40H110M10 80H110M10 100H110"/><path d="M20 10V110M40 10V110M80 10V110M100 10V110"/></g></svg></div>
-<div>
-<small data-cms="realm.math.crumb">01 · Mathematics</small>
-<h2 data-cms="realm.math.name">The Cartesian Realm</h2>
-<p data-cms="realm.math.teaser">Numbers don't lie, but they do argue. Prove your position under pressure.</p>
-<ul class="chips"><li data-cms="realm.math.format">Individual + team rounds</li><li data-cms="realm.math.duration">3 hours, two rounds</li><li data-cms="realm.math.team">1 to 3 people</li></ul>
-</div>
-<span class="more">Rules, judging and requirements</span>
-</a>
 <a class="realm-card" href="/realms/nexus">
 <div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><circle cx="60" cy="60" r="3" fill="var(--rsic-pink)" stroke="none"/>
 <ellipse cx="60" cy="60" rx="46" ry="18" stroke-opacity=".7"/>
 <ellipse cx="60" cy="60" rx="46" ry="18" transform="rotate(60 60 60)" stroke-opacity=".45"/>
 <ellipse cx="60" cy="60" rx="46" ry="18" transform="rotate(120 60 60)" stroke-opacity=".3"/></svg></div>
 <div>
-<small data-cms="realm.pure.crumb">02 · Pure Sciences</small>
+<small data-cms="realm.pure.crumb">01 &middot; Pure Sciences</small>
 <h2 data-cms="realm.pure.name">Project Nexus</h2>
 <p data-cms="realm.pure.teaser">Where hypotheses meet consequence, and observation decides who's right.</p>
-<ul class="chips"><li data-cms="realm.pure.format">Team research + live defence</li><li data-cms="realm.pure.duration">Full day</li><li data-cms="realm.pure.team">2 to 4 people</li></ul>
+<ul class="chips"><li data-cms="realm.pure.rounds_label">Three rounds</li><li data-cms="realm.pure.cap_label">1 to 3 delegates</li></ul>
 </div>
-<span class="more">Rules, judging and requirements</span>
+<span class="more">Rounds, rules and delegate caps</span>
+</a>
+<a class="realm-card" href="/realms/gaias-exchange">
+<div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M60 20 C40 40 40 70 60 100 C80 70 80 40 60 20 Z" stroke-opacity=".6"/>
+<path d="M60 20V100" stroke-opacity=".35"/>
+<path d="M25 55 L45 45 L45 65 Z" fill="var(--rsic-pink)" stroke="none" transform="translate(-6,0)"/>
+<path d="M95 65 L75 55 L75 75 Z" fill="var(--rsic-pink-soft)" stroke="none" transform="translate(6,0)"/></svg></div>
+<div>
+<small data-cms="realm.business.crumb">02 &middot; Environmental Business</small>
+<h2 data-cms="realm.business.name">Gaia's Exchange</h2>
+<p data-cms="realm.business.teaser">Where sustainability meets the balance sheet.</p>
+<ul class="chips"><li data-cms="realm.business.rounds_label">Three rounds</li><li data-cms="realm.business.cap_label">1 to 3 delegates</li></ul>
+</div>
+<span class="more">Rounds, rules and delegate caps</span>
+</a>
+<a class="realm-card" href="/realms/cartesian">
+<div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M10 60H110M60 10V110" stroke-opacity=".4"/>
+<path d="M20 100 L100 20" stroke="var(--rsic-pink)" stroke-opacity=".8"/>
+<g stroke-opacity=".25"><path d="M10 20H110M10 40H110M10 80H110M10 100H110"/><path d="M20 10V110M40 10V110M80 10V110M100 10V110"/></g></svg></div>
+<div>
+<small data-cms="realm.math.crumb">03 &middot; Mathematics</small>
+<h2 data-cms="realm.math.name">The Cartesian Realm</h2>
+<p data-cms="realm.math.teaser">Numbers don't lie, but they do argue. Prove your position under pressure.</p>
+<ul class="chips"><li data-cms="realm.math.rounds_label">Three rounds and a bonus</li><li data-cms="realm.math.cap_label">2 to 3 delegates</li></ul>
+</div>
+<span class="more">Rounds, rules and delegate caps</span>
 </a>
 <a class="realm-card" href="/realms/watson-street">
 <div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M32 8 C55 30 65 30 88 8" stroke-opacity=".7"/>
@@ -77,12 +91,12 @@
 <path d="M32 8 C10 30 10 50 32 72 M88 8 C110 30 110 50 88 72" stroke="var(--rsic-pink)" stroke-opacity=".55"/>
 <g stroke-opacity=".3"><path d="M36 20H84M40 52H80M40 84H80"/></g></svg></div>
 <div>
-<small data-cms="realm.bio.crumb">03 · Biology</small>
+<small data-cms="realm.bio.crumb">04 &middot; Biology</small>
 <h2 data-cms="realm.bio.name">The Watson Street</h2>
 <p data-cms="realm.bio.teaser">Living systems, examined in real time. Evidence over intuition.</p>
-<ul class="chips"><li data-cms="realm.bio.format">Rotational stations</li><li data-cms="realm.bio.duration">2.5 hours</li><li data-cms="realm.bio.team">1 to 2 people</li></ul>
+<ul class="chips"><li data-cms="realm.bio.rounds_label">Three rounds</li><li data-cms="realm.bio.cap_label">2 delegates per team</li></ul>
 </div>
-<span class="more">Rules, judging and requirements</span>
+<span class="more">Rounds, rules and delegate caps</span>
 </a>
 <a class="realm-card" href="/realms/curies-chamber">
 <div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M60 20 L95 40 L95 80 L60 100 L25 80 L25 40 Z" stroke-opacity=".55"/>
@@ -91,12 +105,12 @@
 <circle cx="25" cy="80" r="4" fill="var(--rsic-pink-soft)" stroke="none"/><circle cx="25" cy="40" r="4" fill="var(--rsic-pink-soft)" stroke="none"/>
 <path d="M60 20 L20 15 M95 40 L112 25" stroke-opacity=".35"/></svg></div>
 <div>
-<small data-cms="realm.chem.crumb">04 · Chemistry</small>
+<small data-cms="realm.chem.crumb">05 &middot; Chemistry</small>
 <h2 data-cms="realm.chem.name">Curie's Chamber</h2>
 <p data-cms="realm.chem.teaser">Reactions, structures, and the occasional controlled catastrophe.</p>
-<ul class="chips"><li data-cms="realm.chem.format">Written round + supervised practical</li><li data-cms="realm.chem.duration">3 hours</li><li data-cms="realm.chem.team">1 to 2 people</li></ul>
+<ul class="chips"><li data-cms="realm.chem.rounds_label">Three rounds</li><li data-cms="realm.chem.cap_label">2 to 3 delegates</li></ul>
 </div>
-<span class="more">Rules, judging and requirements</span>
+<span class="more">Rounds, rules and delegate caps</span>
 </a>
 <a class="realm-card" href="/realms/astral-axiom">
 <div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><circle cx="60" cy="60" r="5" fill="var(--rsic-pink)" stroke="none"/>
@@ -104,12 +118,12 @@
 <circle cx="80" cy="60" r="2.4" fill="var(--rsic-pink-soft)" stroke="none"/>
 <circle cx="60" cy="25" r="2" fill="var(--rsic-pink-soft)" stroke="none"/></svg></div>
 <div>
-<small data-cms="realm.physics.crumb">05 · Physics</small>
+<small data-cms="realm.physics.crumb">06 &middot; Physics</small>
 <h2 data-cms="realm.physics.name">Astral Axiom</h2>
 <p data-cms="realm.physics.teaser">The universe's rules, tested at your own scale.</p>
-<ul class="chips"><li data-cms="realm.physics.format">Individual written + rapid-fire round</li><li data-cms="realm.physics.duration">3 hours</li><li data-cms="realm.physics.team">Solo</li></ul>
+<ul class="chips"><li data-cms="realm.physics.rounds_label">Three rounds and a bonus</li><li data-cms="realm.physics.cap_label">2 to 3 delegates</li></ul>
 </div>
-<span class="more">Rules, judging and requirements</span>
+<span class="more">Rounds, rules and delegate caps</span>
 </a>
 <a class="realm-card" href="/realms/hypatias-enclave">
 <div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M10 30H45V50H75V30H110M10 90H35V70H85V90H110M45 50V70" stroke-opacity=".6"/>
@@ -117,12 +131,12 @@
 <circle cx="10" cy="90" r="2.5" fill="var(--rsic-pink-soft)" stroke="none"/><circle cx="110" cy="90" r="2.5" fill="var(--rsic-pink-soft)" stroke="none"/>
 <rect x="50" y="45" width="20" height="20" stroke-opacity=".5"/></svg></div>
 <div>
-<small data-cms="realm.cs.crumb">06 · Computer Science</small>
+<small data-cms="realm.cs.crumb">07 &middot; Computer Science</small>
 <h2 data-cms="realm.cs.name">Hypatia's Enclave</h2>
 <p data-cms="realm.cs.teaser">Logic built from nothing, broken on purpose, rebuilt better.</p>
-<ul class="chips"><li data-cms="realm.cs.format">Team coding + live defence</li><li data-cms="realm.cs.duration">4 hours</li><li data-cms="realm.cs.team">2 to 3 people</li></ul>
+<ul class="chips"><li data-cms="realm.cs.rounds_label">Three rounds</li><li data-cms="realm.cs.cap_label">2 to 3 delegates</li></ul>
 </div>
-<span class="more">Rules, judging and requirements</span>
+<span class="more">Rounds, rules and delegate caps</span>
 </a>
 <a class="realm-card" href="/realms/pterions-sanctum">
 <div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><circle cx="35" cy="35" r="3" fill="var(--rsic-pink)" stroke="none"/><circle cx="85" cy="30" r="2.4" fill="var(--rsic-pink-soft)" stroke="none"/>
@@ -130,37 +144,24 @@
 <circle cx="20" cy="75" r="2.4" fill="var(--rsic-pink-soft)" stroke="none"/><circle cx="62" cy="55" r="3.4" fill="var(--rsic-pink)" stroke="none"/>
 <g stroke-opacity=".45"><path d="M35 35L62 55M85 30L62 55M95 70L62 55M55 90L62 55M20 75L62 55M35 35L20 75M85 30L95 70"/></g></svg></div>
 <div>
-<small data-cms="realm.psych.crumb">07 · Psychology</small>
+<small data-cms="realm.psych.crumb">08 &middot; Psychology</small>
 <h2 data-cms="realm.psych.name">Pterion's Sanctum</h2>
 <p data-cms="realm.psych.teaser">The mind studying itself, under a deadline.</p>
-<ul class="chips"><li data-cms="realm.psych.format">Case study + panel defence</li><li data-cms="realm.psych.duration">3 hours</li><li data-cms="realm.psych.team">1 to 2 people</li></ul>
+<ul class="chips"><li data-cms="realm.psych.rounds_label">Three rounds</li><li data-cms="realm.psych.cap_label">3 delegates per team</li></ul>
 </div>
-<span class="more">Rules, judging and requirements</span>
-</a>
-<a class="realm-card" href="/realms/gaias-exchange">
-<div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M60 20 C40 40 40 70 60 100 C80 70 80 40 60 20 Z" stroke-opacity=".6"/>
-<path d="M60 20V100" stroke-opacity=".35"/>
-<path d="M25 55 L45 45 L45 65 Z" fill="var(--rsic-pink)" stroke="none" transform="translate(-6,0)"/>
-<path d="M95 65 L75 55 L75 75 Z" fill="var(--rsic-pink-soft)" stroke="none" transform="translate(6,0)"/></svg></div>
-<div>
-<small data-cms="realm.business.crumb">08 · Environmental Business</small>
-<h2 data-cms="realm.business.name">Gaia's Exchange</h2>
-<p data-cms="realm.business.teaser">Where sustainability meets the balance sheet.</p>
-<ul class="chips"><li data-cms="realm.business.format">Team pitch + negotiation</li><li data-cms="realm.business.duration">Half day</li><li data-cms="realm.business.team">2 to 4 people</li></ul>
-</div>
-<span class="more">Rules, judging and requirements</span>
+<span class="more">Rounds, rules and delegate caps</span>
 </a>
 <a class="realm-card" href="/realms/jokers-act">
 <div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><circle cx="60" cy="60" r="42" stroke-opacity=".5"/>
 <g stroke-opacity=".65"><path d="M60 18L60 38M102 60L82 60M60 102L60 82M18 60L38 60"/><path d="M89 31L75 45M89 89L75 75M31 89L45 75M31 31L45 45"/></g>
 <circle cx="60" cy="60" r="10" fill="var(--rsic-pink)" fill-opacity=".8" stroke="none"/></svg></div>
 <div>
-<small data-cms="realm.film.crumb">09 · Film &amp; Drama</small>
+<small data-cms="realm.film.crumb">09 &middot; Film &amp; Drama</small>
 <h2 data-cms="realm.film.name">The Joker's Act</h2>
 <p data-cms="realm.film.teaser">Truth, performed. Fiction, believed.</p>
-<ul class="chips"><li data-cms="realm.film.format">Team performance</li><li data-cms="realm.film.duration">10-minute slot</li><li data-cms="realm.film.team">2 to 6 people</li></ul>
+<ul class="chips"><li data-cms="realm.film.rounds_label">Three rounds</li><li data-cms="realm.film.cap_label">1 to 3 delegates</li></ul>
 </div>
-<span class="more">Rules, judging and requirements</span>
+<span class="more">Rounds, rules and delegate caps</span>
 </a>
 <a class="realm-card" href="/realms/athenas-bench">
 <div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M60 15V95" stroke-opacity=".6"/>
@@ -170,12 +171,12 @@
 <path d="M83 40 A12 12 0 0 0 107 40 Z" stroke-opacity=".5"/>
 <circle cx="60" cy="15" r="2.6" fill="var(--rsic-pink)" stroke="none"/></svg></div>
 <div>
-<small data-cms="realm.law.crumb">10 · Law &amp; Sociology</small>
+<small data-cms="realm.law.crumb">10 &middot; Law &amp; Sociology</small>
 <h2 data-cms="realm.law.name">Athena's Bench</h2>
 <p data-cms="realm.law.teaser">Argue the case. Question the system it came from.</p>
-<ul class="chips"><li data-cms="realm.law.format">Team moot + bench questioning</li><li data-cms="realm.law.duration">Full day</li><li data-cms="realm.law.team">2 to 3 people</li></ul>
+<ul class="chips"><li data-cms="realm.law.rounds_label">Three rounds</li><li data-cms="realm.law.cap_label">2 to 4 delegates</li></ul>
 </div>
-<span class="more">Rules, judging and requirements</span>
+<span class="more">Rounds, rules and delegate caps</span>
 </a>
 <a class="realm-card" href="/realms/theseus-circuit">
 <div class="glyph" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><path d="M60 20V32" stroke-opacity=".5"/>
@@ -190,9 +191,9 @@
 <small data-cms="realm.robotics.crumb">11 &middot; Robotics</small>
 <h2 data-cms="realm.robotics.name">Theseus' Circuit</h2>
 <p data-cms="realm.robotics.teaser">Build it. Test it. Take it to the circuit.</p>
-<ul class="chips"><li data-cms="realm.robotics.format">Three rounds, build to Robo Soccer</li><li data-cms="realm.robotics.duration">Across three days</li><li data-cms="realm.robotics.team">Team size coming soon</li></ul>
+<ul class="chips"><li data-cms="realm.robotics.rounds_label">Three rounds across three days</li><li data-cms="realm.robotics.cap_label">2 to 3 delegates</li></ul>
 </div>
-<span class="more">Rules, judging and requirements</span>
+<span class="more">Rounds, rules and delegate caps</span>
 </a>
 </div>
 </section>
@@ -208,25 +209,25 @@
 <div class="wrap">
 <section class="lab">
 <div class="lab-nodes">
-<button class="lab-node active" type="button" data-key="math" data-caption="Mathematics / Coordinate system" aria-pressed="true"><span>01</span><b data-cms="realm.math.name">The Cartesian Realm</b><small>Mathematics</small></button>
-<button class="lab-node" type="button" data-key="pure" data-caption="Pure sciences / Atomic model" aria-pressed="false"><span>02</span><b data-cms="realm.pure.name">Project Nexus</b><small>Pure Sciences</small></button>
-<button class="lab-node" type="button" data-key="bio" data-caption="Biology / Double helix" aria-pressed="false"><span>03</span><b data-cms="realm.bio.name">The Watson Street</b><small>Biology</small></button>
-<button class="lab-node" type="button" data-key="chem" data-caption="Chemistry / Molecular bond" aria-pressed="false"><span>04</span><b data-cms="realm.chem.name">Curie's Chamber</b><small>Chemistry</small></button>
-<button class="lab-node" type="button" data-key="physics" data-caption="Physics / Orbital system" aria-pressed="false"><span>05</span><b data-cms="realm.physics.name">Astral Axiom</b><small>Physics</small></button>
-<button class="lab-node" type="button" data-key="cs" data-caption="Computer science / Circuit path" aria-pressed="false"><span>06</span><b data-cms="realm.cs.name">Hypatia's Enclave</b><small>Computer Science</small></button>
-<button class="lab-node" type="button" data-key="psych" data-caption="Psychology / Cognitive network" aria-pressed="false"><span>07</span><b data-cms="realm.psych.name">Pterion's Sanctum</b><small>Psychology</small></button>
-<button class="lab-node" type="button" data-key="business" data-caption="Environmental business / Exchange cycle" aria-pressed="false"><span>08</span><b data-cms="realm.business.name">Gaia's Exchange</b><small>Environmental Business</small></button>
+<button class="lab-node active" type="button" data-key="pure" data-caption="Pure sciences / Atomic model" aria-pressed="true"><span>01</span><b data-cms="realm.pure.name">Project Nexus</b><small>Pure Sciences</small></button>
+<button class="lab-node" type="button" data-key="business" data-caption="Environmental business / Exchange cycle" aria-pressed="false"><span>02</span><b data-cms="realm.business.name">Gaia's Exchange</b><small>Environmental Business</small></button>
+<button class="lab-node" type="button" data-key="math" data-caption="Mathematics / Coordinate system" aria-pressed="false"><span>03</span><b data-cms="realm.math.name">The Cartesian Realm</b><small>Mathematics</small></button>
+<button class="lab-node" type="button" data-key="bio" data-caption="Biology / Double helix" aria-pressed="false"><span>04</span><b data-cms="realm.bio.name">The Watson Street</b><small>Biology</small></button>
+<button class="lab-node" type="button" data-key="chem" data-caption="Chemistry / Molecular bond" aria-pressed="false"><span>05</span><b data-cms="realm.chem.name">Curie's Chamber</b><small>Chemistry</small></button>
+<button class="lab-node" type="button" data-key="physics" data-caption="Physics / Orbital system" aria-pressed="false"><span>06</span><b data-cms="realm.physics.name">Astral Axiom</b><small>Physics</small></button>
+<button class="lab-node" type="button" data-key="cs" data-caption="Computer science / Circuit path" aria-pressed="false"><span>07</span><b data-cms="realm.cs.name">Hypatia's Enclave</b><small>Computer Science</small></button>
+<button class="lab-node" type="button" data-key="psych" data-caption="Psychology / Cognitive network" aria-pressed="false"><span>08</span><b data-cms="realm.psych.name">Pterion's Sanctum</b><small>Psychology</small></button>
 <button class="lab-node" type="button" data-key="film" data-caption="Film &amp; drama / Aperture" aria-pressed="false"><span>09</span><b data-cms="realm.film.name">The Joker's Act</b><small>Film &amp; Drama</small></button>
 <button class="lab-node" type="button" data-key="law" data-caption="Law &amp; sociology / Balance" aria-pressed="false"><span>10</span><b data-cms="realm.law.name">Athena's Bench</b><small>Law &amp; Sociology</small></button>
 <button class="lab-node" type="button" data-key="robotics" data-caption="Robotics / Autonomous machine" aria-pressed="false"><span>11</span><b data-cms="realm.robotics.name">Theseus' Circuit</b><small>Robotics</small></button>
 </div>
 <div class="lab-stage">
-<div class="lab-pattern active" data-for="math"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8">
+<div class="lab-pattern" data-for="math"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8">
 <path d="M10 60H110M60 10V110" stroke-opacity=".4"/>
 <path d="M20 100 L100 20" stroke="var(--rsic-pink)" stroke-opacity=".8"/>
 <g stroke-opacity=".25"><path d="M10 20H110M10 40H110M10 80H110M10 100H110"/><path d="M20 10V110M40 10V110M80 10V110M100 10V110"/></g>
 </svg></div>
-<div class="lab-pattern" data-for="pure"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8">
+<div class="lab-pattern active" data-for="pure"><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8">
 <circle cx="60" cy="60" r="3" fill="var(--rsic-pink)" stroke="none"/>
 <ellipse cx="60" cy="60" rx="46" ry="18" stroke-opacity=".7"/>
 <ellipse cx="60" cy="60" rx="46" ry="18" transform="rotate(60 60 60)" stroke-opacity=".45"/>
@@ -293,7 +294,7 @@
 <circle cx="103" cy="97" r="6" stroke-opacity=".45"/><path d="M97 97H109M103 91V103" stroke-opacity=".3"/>
 <circle cx="60" cy="18" r="2.6" fill="var(--rsic-pink)" stroke="none"/>
 <circle cx="52" cy="45" r="2.4" fill="var(--rsic-pink)" stroke="none"/><circle cx="68" cy="45" r="2.4" fill="var(--rsic-pink)" stroke="none"/></svg></div>
-<p class="lab-caption">Mathematics / Coordinate system</p>
+<p class="lab-caption">Pure sciences / Atomic model</p>
 </div>
 </section>
 </div>
@@ -308,10 +309,11 @@
 <footer class="site-foot">
 <div class="site-foot-inner">
 <div>
-<a class="logo" href="/" aria-label="RSIC home"><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14"/><path d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"/><path d="M72 6v30"/><path d="M111.49 11.36a15 15 0 1 0 0 19.28"/></g><circle class="dot" cx="123" cy="33" r="3.6"/></svg></a>
+<a class="logo" href="/" aria-label="RSIC home"><span class="wm" aria-hidden="true"><i>R</i><i>S</i><i>I</i><i>C</i><i class="dot">.</i></span></a>
 <p>RSIC 2026 runs from <b data-cms="event.dates">Friday 13 to Sunday 15 November</b>, starting at <b data-cms="event.start_time">1:45 PM PKT</b>. Eleven realms, from maths and physics to moot court and theatre.</p>
 </div>
 <ul class="foot-links">
+<li><a href="/">Home</a></li>
 <li><a href="/about">About</a></li>
 <li><a href="/realms">Realms</a></li>
 <li><a href="/experience">Experience</a></li>

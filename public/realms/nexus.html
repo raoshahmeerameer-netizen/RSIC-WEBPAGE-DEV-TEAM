@@ -16,15 +16,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 <header class="site-head">
 <div class="site-head-inner">
-<a class="logo" href="/" aria-label="RSIC home"><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14"/><path d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"/><path d="M72 6v30"/><path d="M111.49 11.36a15 15 0 1 0 0 19.28"/></g><circle class="dot" cx="123" cy="33" r="3.6"/></svg></a>
+<a class="logo" href="/" aria-label="RSIC home"><span class="wm" aria-hidden="true"><i>R</i><i>S</i><i>I</i><i>C</i><i class="dot">.</i></span></a>
 <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
 <nav class="site-nav" id="site-nav" aria-label="Main">
+<a href="/">Home</a>
 <a href="/about">About</a>
 <a href="/realms" aria-current="page">Realms</a>
 <a href="/experience">Experience</a>
@@ -40,54 +41,45 @@
 <main class="wrap realm-page">
 <section class="realm-hero">
 <div>
-<p class="crumb"><a href="/realms">Realms</a><span>/</span><span><b data-cms="realm.pure.crumb">02 Pure Sciences</b></span></p>
+<p class="crumb"><a href="/realms">Realms</a><span>/</span><span><b data-cms="realm.pure.crumb">01 Pure Sciences</b></span></p>
 <h1 data-cms="realm.pure.name">Project Nexus</h1>
-<p class="tagline"><span data-cms="realm.pure.tagline">Hypothesis in, evidence out.</span></p>
-<p class="realm-intro" data-cms="realm.pure.intro">Project Nexus is built around the scientific method itself. Designing an experiment, defending its logic, and surviving cross-examination from judges who've run the same experiment badly at least once.</p>
+<p class="tagline"><span data-cms="realm.pure.tagline">Three sciences. One chaotic Nexus.</span></p>
+<p class="realm-intro" data-cms="realm.pure.intro">Science rarely stays in its own lane, and neither do we. So we came up with Project Nexus. Whether it's Biology, Chemistry or Physics, we took them out of their ICUs and dropped them straight into a world of fun, unexpected puzzles. Here, familiar concepts collide, overlap, and usually lead you somewhere you weren't expecting.</p>
 </div>
-<div class="glyph-panel" aria-hidden="true"><b>02</b><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><circle cx="60" cy="60" r="3" fill="var(--rsic-pink)" stroke="none"/>
+<div class="glyph-panel" aria-hidden="true"><b>01</b><svg viewBox="0 0 120 120" fill="none" stroke="var(--rsic-pink-soft)" stroke-width="0.8"><circle cx="60" cy="60" r="3" fill="var(--rsic-pink)" stroke="none"/>
 <ellipse cx="60" cy="60" rx="46" ry="18" stroke-opacity=".7"/>
 <ellipse cx="60" cy="60" rx="46" ry="18" transform="rotate(60 60 60)" stroke-opacity=".45"/>
 <ellipse cx="60" cy="60" rx="46" ry="18" transform="rotate(120 60 60)" stroke-opacity=".3"/></svg></div>
 </section>
 
 <div class="facts">
-<div><small>Theme</small><p data-cms="realm.pure.theme">Experimental design under scrutiny</p></div>
-<div><small>Format</small><p data-cms="realm.pure.format">Team research + live defence</p></div>
-<div><small>Team size</small><p data-cms="realm.pure.team">2 to 4</p></div>
-<div><small>Duration</small><p data-cms="realm.pure.duration">Full day</p></div>
+<div><small>Category Head</small><p data-cms="realm.pure.head">Muhammad Mamoon Yasir</p></div>
+<div><small>Category Co-Head</small><p data-cms="realm.pure.cohead">Anaya Shahid</p></div>
+<div><small>Rounds</small><p data-cms="realm.pure.rounds_label">Three rounds</p></div>
+<div><small>Delegate cap</small><p data-cms="realm.pure.cap_label">1 to 3 delegates</p></div>
 </div>
 
-<div class="detail">
-<section><h2>Rules</h2><ol class="rules">
-<li>Teams submit a written brief before the live defence.</li>
-<li>All data must be reproducible from the brief alone.</li>
-<li>Judges may ask follow-up questions for up to 10 minutes.</li>
-<li>External sources must be cited in the brief.</li>
-<li>One resubmission window before the deadline.</li>
+<section class="rounds"><h2>The rounds</h2><ol class="round-list">
+<li>
+<div class="round-top"><b>01</b><h3 data-cms="realm.pure.r1.name">The Nexus Trials</h3></div>
+<ul class="chips"><li data-cms="realm.pure.r1.cap">1 to 3 delegates</li><li data-cms="realm.pure.r1.adv">Elimination. The top 50% qualify</li></ul>
+<p data-cms="realm.pure.r1.body">Each team gets a set of scientific challenges: quizzes, visual identification, observation questions, puzzles and short tasks drawn from physics, chemistry and biology. Some test what you know directly. Others ask you to observe carefully, make connections, or apply what you know to a situation you haven't seen before. Difficulty varies through the packet, so teams have to manage their own time.</p>
+<ul class="plain"><li>Each team is given one question at a time.</li><li>Teams must finish within the time given.</li><li>Discussion is allowed within your own team only.</li><li>No outside resources or assistance unless the organisers provide them.</li><li>Marks are awarded for correctness.</li></ul>
+</li>
+<li>
+<div class="round-top"><b>02</b><h3 data-cms="realm.pure.r2.name">The Hidden Circuit</h3></div>
+<ul class="chips"><li data-cms="realm.pure.r2.cap">2 to 3 delegates</li><li data-cms="realm.pure.r2.adv">Elimination. The top 5 teams qualify</li></ul>
+<p data-cms="realm.pure.r2.body">Each team starts with a clue that leads to their first challenge. Finish it and you receive the next clue. The challenges involve observation, experiments, calculations, scientific concepts and problem solving, and the clues connect to one another, so teams have to pay attention to their surroundings and to everything they collect along the way.</p>
+<ul class="plain"><li>Begin with the clue the organisers provide.</li><li>Finish a challenge before moving to the next clue.</li><li>Clues must not be taken, hidden or changed.</li><li>Stay inside the areas the organisers mark out.</li><li>A hint may be requested if your team is stuck.</li><li>Marks are awarded for completion and accuracy.</li></ul>
+</li>
+<li>
+<div class="round-top"><b>03</b><h3 data-cms="realm.pure.r3.name">Momentum</h3></div>
+<ul class="chips"><li data-cms="realm.pure.r3.cap">No cap</li><li data-cms="realm.pure.r3.adv">The top two teams take Winner and Runner-Up</li></ul>
+<p data-cms="realm.pure.r3.body">Each team is given materials and has to design and build a small car that moves under a propulsion system of their own design. Force, motion, friction, balance and stability all matter. Once building time is over the cars are tested on the track for movement, propulsion, stability and overall performance.</p>
+<ul class="plain"><li>Use the materials provided, or your own approved materials.</li><li>The car must be built within the time given.</li><li>The car must have a working propulsion system.</li><li>No pushing or manually moving the car during the test.</li><li>All parts must be securely attached before testing.</li><li>Modifications must use the provided materials, within the allowed time.</li></ul>
+</li>
 </ol></section>
-<section><h2>Judging criteria</h2><ul class="bars">
-<li><div class="row"><span>Methodology</span><b>35%</b></div><div class="track"><div class="fill" style="width:35%"></div></div></li>
-<li><div class="row"><span>Evidence quality</span><b>30%</b></div><div class="track"><div class="fill" style="width:30%"></div></div></li>
-<li><div class="row"><span>Defence</span><b>20%</b></div><div class="track"><div class="fill" style="width:20%"></div></div></li>
-<li><div class="row"><span>Clarity</span><b>15%</b></div><div class="track"><div class="fill" style="width:15%"></div></div></li>
-</ul></section>
-</div>
 
-<div class="detail">
-<section><h2>Requirements</h2><ul class="plain">
-<li>Written brief (max 6 pages)</li>
-<li>Any physical materials for demonstration</li>
-<li>Laptop for slides if presenting digitally</li>
-<li>Printed citation list</li>
-</ul></section>
-<section><h2>Schedule &amp; materials</h2><ul class="plain">
-<li>Full timings are released with the event schedule on the Updates page.</li>
-<li>Room and stage assignments are confirmed the week of RSIC.</li>
-</ul></section>
-</div>
-
-<p class="callout"><strong>Heads up</strong>Briefs submitted after the stated deadline are marked but capped at 70% of the total score.</p>
 
 <section class="realm-cta">
 <div><h2><em>Enter</em> <b data-cms="realm.pure.name">Project Nexus</b></h2><p>Pure Sciences. Add it to your delegation's realms when you register.</p></div>
@@ -95,18 +87,19 @@
 </section>
 
 <nav class="pager" aria-label="More realms">
-<a class="prev" href="/realms/cartesian"><small>Previous realm</small><strong data-cms="realm.math.name">The Cartesian Realm</strong></a>
-<a class="next" href="/realms/watson-street"><small>Next realm</small><strong data-cms="realm.bio.name">The Watson Street</strong></a>
+<a class="prev" href="/realms/theseus-circuit"><small>Previous realm</small><strong data-cms="realm.robotics.name">Theseus' Circuit</strong></a>
+<a class="next" href="/realms/gaias-exchange"><small>Next realm</small><strong data-cms="realm.business.name">Gaia's Exchange</strong></a>
 </nav>
 </main>
 
 <footer class="site-foot">
 <div class="site-foot-inner">
 <div>
-<a class="logo" href="/" aria-label="RSIC home"><svg viewBox="3 0 127 40" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 36V6h12a8 8 0 0 1 0 16H9M20 22l11 14"/><path d="M57.14 8.7A7.5 7.5 0 1 0 51 20.5a7.5 7.5 0 1 1-6.14 11.8"/><path d="M72 6v30"/><path d="M111.49 11.36a15 15 0 1 0 0 19.28"/></g><circle class="dot" cx="123" cy="33" r="3.6"/></svg></a>
+<a class="logo" href="/" aria-label="RSIC home"><span class="wm" aria-hidden="true"><i>R</i><i>S</i><i>I</i><i>C</i><i class="dot">.</i></span></a>
 <p>RSIC 2026 runs from <b data-cms="event.dates">Friday 13 to Sunday 15 November</b>, starting at <b data-cms="event.start_time">1:45 PM PKT</b>. Eleven realms, from maths and physics to moot court and theatre.</p>
 </div>
 <ul class="foot-links">
+<li><a href="/">Home</a></li>
 <li><a href="/about">About</a></li>
 <li><a href="/realms">Realms</a></li>
 <li><a href="/experience">Experience</a></li>
