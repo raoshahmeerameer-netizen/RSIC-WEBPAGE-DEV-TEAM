@@ -553,10 +553,9 @@ a.tile{text-decoration:none;color:inherit}
   .pager .next{text-align:left}
   .org-node{min-width:0;width:100%}
   /* bigger wheel labels for phones; the four side labels step outward so they clear their dots */
-  .disc-wheel text{font-size:18px}
-  .disc-wheel text:nth-of-type(3),.disc-wheel text:nth-of-type(4){transform:translateX(7px)}
-  .disc-wheel text:nth-of-type(8),.disc-wheel text:nth-of-type(9){transform:translateX(-7px)}
-  .disc-wheel text:nth-of-type(5),.disc-wheel text:nth-of-type(7){transform:translateY(6px)}
+  /* 18 units rendered at 9px on a phone. The nth-of-type nudges below were
+     tuned for the old ten-spoke wheel and moved the wrong labels. */
+  .disc-wheel text,.disc-wheel tspan{font-size:26px}
 }
 @media (max-width:400px){
   .principles,.disc-list{grid-template-columns:1fr}
