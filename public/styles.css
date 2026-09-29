@@ -719,3 +719,8 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
 .contact-foot p{margin:0}
 .contact-foot small{display:block;font:600 .8rem/1 var(--sans);color:var(--pink);margin-bottom:6px}
 .foot-credit{margin:8px 0 0;font:500 .82rem/1.5 var(--sans);color:var(--text-soft);opacity:.7}
+
+
+/* the contact email is one long unbreakable word on a narrow phone */
+.text-link,.contact-foot a,.foot-contact a span{overflow-wrap:anywhere}
+.contact-foot p{min-width:0;max-width:100%}

@@ -1381,48 +1381,89 @@
         $("refreshBtn").addEventListener("click", loadRegistrations);
 
         // ---------------------------------------------------------- CSV
+        // One row per delegation, with every delegate spread into their own
+        // columns so the sheet is usable. The old export still wrote age and
+        // class, which no longer exist, and left out everything added since.
         $("csvBtn").addEventListener("click", () => {
           if (!rows.length)
             return say($("tableMsg"), "Nothing to export yet.", false);
-          const cols = [
-            "id",
-            "created_at",
-            "route",
-            "status",
-            "name",
-            "email",
-            "phone",
-            "realm",
-            "realms",
-            "school",
-            "contact_name",
-            "contact_email",
-            "delegates",
-            "delegate_list",
+
+          const others = Math.max(
+            0,
+            ...rows.map((r) =>
+              Array.isArray(r.delegate_list) ? r.delegate_list.length : 0,
+            ),
+          );
+
+          const head = [
+            "Reference",
+            "Registered",
+            "Status",
+            "School",
+            "School email",
+            "Team name",
+            "Supervisor",
+            "Supervisor number",
+            "Supervisor email",
+            "Delegates",
+            "Realms chosen",
+            "Realms",
+            "Head delegate",
+            "Head delegate email",
+            "Head delegate number",
+            "Head delegate CNIC",
+            "Head delegate photo",
           ];
-          const esc = (v) =>
-            '"' +
-            String(
-              v == null
-                ? ""
-                : Array.isArray(v)
-                  ? v
-                      .map((x) =>
-                        x && typeof x === "object"
-                          ? [x.name, x.age, x.class].filter(Boolean).join(" ")
-                          : x,
-                      )
-                      .join(" | ")
-                  : v,
-            ).replace(
-              /"/g,
-              '""',
-            ) +
-            '"';
-          const csv = [
-            cols.join(","),
-            ...rows.map((r) => cols.map((c) => esc(r[c])).join(",")),
-          ].join("\r\n");
+          for (let i = 1; i <= others; i++)
+            head.push(
+              "Delegate " + (i + 1) + " name",
+              "Delegate " + (i + 1) + " email",
+              "Delegate " + (i + 1) + " number",
+              "Delegate " + (i + 1) + " CNIC",
+              "Delegate " + (i + 1) + " photo",
+            );
+
+          const line = (r) => {
+            const h = r.head_delegate || {};
+            const keys = realmsOf(r);
+            const out = [
+              "#" + r.id,
+              r.created_at ? new Date(r.created_at).toLocaleString() : "",
+              r.status || "Pending",
+              r.school,
+              r.school_email,
+              r.team_name,
+              r.supervisor_name || r.contact_name,
+              r.supervisor_phone || r.phone,
+              r.supervisor_email || r.contact_email,
+              r.delegates,
+              keys.length,
+              keys.map(realmName).join(" | "),
+              h.name,
+              h.email,
+              h.phone,
+              h.cnic,
+              h.photo,
+            ];
+            const list = Array.isArray(r.delegate_list) ? r.delegate_list : [];
+            for (let i = 0; i < others; i++) {
+              const d = list[i] || {};
+              out.push(d.name, d.email, d.phone, d.cnic, d.photo);
+            }
+            return out;
+          };
+
+          // a leading ' keeps Excel from turning a CNIC or a phone number
+          // into a number and losing the leading zero
+          const esc = (v) => {
+            let t = v == null ? "" : String(v);
+            if (/^[0-9+][0-9+\- ]{6,}$/.test(t)) t = "'" + t;
+            return '"' + t.replace(/"/g, '""') + '"';
+          };
+
+          const csv = [head, ...rows.map(line)]
+            .map((r) => r.map(esc).join(","))
+            .join("\r\n");
           const url = URL.createObjectURL(
             new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }),
           );
@@ -1434,7 +1475,11 @@
             ".csv";
           a.click();
           URL.revokeObjectURL(url);
-          say($("tableMsg"), "Exported " + rows.length + " rows.", true);
+          say(
+            $("tableMsg"),
+            "Exported " + rows.length + " delegation" + (rows.length > 1 ? "s" : "") + ".",
+            true,
+          );
         });
 
         // ---------------------------------------------------------- the switch
