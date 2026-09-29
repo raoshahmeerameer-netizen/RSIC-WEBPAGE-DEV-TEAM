@@ -1008,6 +1008,16 @@ const rsicContentReady = (async () => {
       const v = content[el.dataset.cms];
       if (v != null && v !== "") rsicSetText(el, v);
     });
+    // photos: set the src and reveal the image, otherwise the initials stay
+    document.querySelectorAll("[data-cms-img]").forEach((el) => {
+      const v = content[el.dataset.cmsImg];
+      if (v != null && v !== "") {
+        el.src = v;
+        el.hidden = false;
+        const box = el.closest(".member-photo");
+        if (box) box.classList.add("has-photo");
+      }
+    });
     window.RSIC_CONTENT = content;
     document.dispatchEvent(new CustomEvent("rsic:content", { detail: content }));
     return content;

@@ -341,6 +341,7 @@ app.get(["/admin", "/admin.html", "/admindashboard.html"], (_req, res) =>
 // realms.html and the realms/ folder share a name, so serve the page directly
 // before express.static looks for a directory index that does not exist.
 app.get(["/realms", "/realms/"], (_req, res) => sendPage(res, "realms.html"));
+app.get(["/team", "/team/"], (_req, res) => sendPage(res, "team.html"));
 
 // One address per page: /about, never /about.html.
 app.get(/^\/(.+)\.html$/, (req, res) => {
