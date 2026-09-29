@@ -993,6 +993,11 @@ const rsicEscape = (s) =>
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
   );
 
+const rsicSafeUrl = (v) => {
+  const s = String(v).trim();
+  return /^https?:\/\//i.test(s) || s.startsWith("/") ? s : "";
+};
+
 const rsicSetText = (el, value) => {
   if (value.includes("*"))
     el.innerHTML = rsicEscape(value).replace(/\*([^*]+)\*/g, "<em>$1</em>");
@@ -1010,8 +1015,8 @@ const rsicContentReady = (async () => {
     });
     // links that only exist once a file has been uploaded, e.g. study guides
     document.querySelectorAll("[data-cms-href]").forEach((el) => {
-      const v = content[el.dataset.cmsHref];
-      if (v != null && v !== "") {
+      const v = rsicSafeUrl(content[el.dataset.cmsHref] || "");
+      if (v) {
         el.href = v;
         el.hidden = false;
       }
@@ -1019,8 +1024,8 @@ const rsicContentReady = (async () => {
 
     // photos: set the src and reveal the image, otherwise the initials stay
     document.querySelectorAll("[data-cms-img]").forEach((el) => {
-      const v = content[el.dataset.cmsImg];
-      if (v != null && v !== "") {
+      const v = rsicSafeUrl(content[el.dataset.cmsImg] || "");
+      if (v) {
         el.src = v;
         el.hidden = false;
         const box = el.closest(".member-photo");
