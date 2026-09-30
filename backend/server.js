@@ -483,11 +483,32 @@ app.patch("/api/registrations/:id", requireAdmin, async (req, res) => {
 });
 
 app.delete("/api/registrations/:id", requireAdmin, async (req, res) => {
+  // Take the delegation's photos with it. These are students' pictures, so
+  // leaving them in the bucket after the row is gone keeps personal data
+  // around with nothing pointing at it.
+  const { data: row } = await supabase
+    .from("registrations")
+    .select("files_folder")
+    .eq("id", req.params.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("registrations")
     .delete()
     .eq("id", req.params.id);
   if (error) return res.status(500).json({ error: error.message });
+
+  const folder = row && row.files_folder;
+  if (folder && /^[0-9a-f-]{36}$/.test(folder)) {
+    const { data: files } = await supabase.storage
+      .from("registration-files")
+      .list(folder);
+    if (files && files.length)
+      await supabase.storage
+        .from("registration-files")
+        .remove(files.map((f) => folder + "/" + f.name));
+  }
+
   res.json({ ok: true });
 });
 

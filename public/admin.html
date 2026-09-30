@@ -530,6 +530,9 @@
             <button class="action-btn ghost" type="button" id="refreshBtn">
               Refresh
             </button>
+            <button class="action-btn" type="button" id="pdfBtn">
+              Export PDF
+            </button>
             <button class="action-btn ghost" type="button" id="csvBtn">
               Export CSV
             </button>
@@ -1386,6 +1389,514 @@
         // One row per delegation, with every delegate spread into their own
         // columns so the sheet is usable. The old export still wrote age and
         // class, which no longer exist, and left out everything added since.
+        // ---------------------------------------------------------- PDF export
+        // A printable record of every delegation: the school, the supervisor,
+        // the realms and a row per delegate with their photo. The libraries are
+        // only fetched the first time somebody exports.
+        const PDF_LIBS = [
+          "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+          "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js",
+        ];
+        let pdfLibs = null;
+        const loadScript = (src) =>
+          new Promise((ok, bad) => {
+            const el = document.createElement("script");
+            el.src = src;
+            el.onload = ok;
+            el.onerror = () => bad(new Error("Could not reach the PDF library."));
+            document.head.appendChild(el);
+          });
+        const ensurePdf = () =>
+          (pdfLibs =
+            pdfLibs ||
+            (async () => {
+              for (const src of PDF_LIBS) await loadScript(src);
+              if (!window.jspdf || !window.jspdf.jsPDF)
+                throw new Error("The PDF library did not load.");
+            })());
+
+        // Photos live in the private bucket, so they come back through the
+        // admin file route. Square them off so a tall photo is not stretched.
+        const photoCache = new Map();
+        const squarePhoto = (blob, size) =>
+          new Promise((done) => {
+            const img = new Image();
+            const url = URL.createObjectURL(blob);
+            img.onload = () => {
+              const side = Math.min(img.width, img.height);
+              const c = document.createElement("canvas");
+              c.width = c.height = size;
+              const g = c.getContext("2d");
+              g.fillStyle = "#0b1d3b";
+              g.fillRect(0, 0, size, size);
+              g.drawImage(
+                img,
+                (img.width - side) / 2,
+                (img.height - side) / 2,
+                side,
+                side,
+                0,
+                0,
+                size,
+                size,
+              );
+              URL.revokeObjectURL(url);
+              done(c.toDataURL("image/jpeg", 0.8));
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(url);
+              done(null);
+            };
+            img.src = url;
+          });
+
+        async function photoFor(path) {
+          if (!path) return null;
+          if (photoCache.has(path)) return photoCache.get(path);
+          let out = null;
+          try {
+            const r = await fetch(
+              api("/api/admin/file?path=" + encodeURIComponent(path)),
+              { headers: { Authorization: "Bearer " + token }, redirect: "follow" },
+            );
+            if (r.ok) {
+              const blob = await r.blob();
+              if (blob.type.indexOf("image/") === 0)
+                out = await squarePhoto(blob, 260);
+            }
+          } catch (e) {
+            out = null;
+          }
+          photoCache.set(path, out);
+          return out;
+        }
+
+        const initialsOf = (name) =>
+          String(name || "")
+            .trim()
+            .split(/\s+/)
+            .slice(0, 2)
+            .map((w) => w[0] || "")
+            .join("")
+            .toUpperCase();
+
+        async function buildPdf(list) {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ unit: "pt", format: "a4", compress: true });
+          const W = doc.internal.pageSize.getWidth();
+          const H = doc.internal.pageSize.getHeight();
+          const M = 44;
+          const FULL = W - M * 2;
+
+          const NAVY = [4, 11, 26];
+          const PANEL = [11, 29, 59];
+          const PINK = [208, 118, 143];
+          const CREAM = [243, 238, 232];
+          const SOFT = [126, 138, 158];
+          const INK = [26, 34, 48];
+          const RULE = [223, 227, 233];
+          const TINT = [246, 247, 249];
+
+          // ---- every photo first, so the drawing pass can stay synchronous
+          const wanted = [];
+          list.forEach((r) => {
+            const h = r.head_delegate || {};
+            if (h.photo) wanted.push(h.photo);
+            (Array.isArray(r.delegate_list) ? r.delegate_list : []).forEach((d) => {
+              if (d && d.photo) wanted.push(d.photo);
+            });
+          });
+          const unique = [...new Set(wanted)];
+          for (let i = 0; i < unique.length; i++) {
+            await photoFor(unique[i]);
+            say(
+              $("tableMsg"),
+              "Collecting photos, " + (i + 1) + " of " + unique.length + "...",
+              true,
+            );
+          }
+          const pic = (path) => (path ? photoCache.get(path) || null : null);
+
+          // ---- cover
+          doc.setFillColor.apply(doc, NAVY);
+          doc.rect(0, 0, W, H, "F");
+          doc.setFont("times", "bold");
+          doc.setFontSize(44);
+          doc.setTextColor.apply(doc, CREAM);
+          doc.text("RSIC", M, 148);
+          doc.setTextColor.apply(doc, PINK);
+          doc.text(".", M + doc.getTextWidth("RSIC"), 148);
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10.5);
+          doc.setTextColor.apply(doc, SOFT);
+          doc.text("Ravi Science & Innovation Competition", M, 170);
+
+          doc.setDrawColor.apply(doc, PINK);
+          doc.setLineWidth(2);
+          doc.line(M, 196, M + 64, 196);
+
+          doc.setFont("times", "bold");
+          doc.setFontSize(30);
+          doc.setTextColor.apply(doc, CREAM);
+          doc.text("Registrations", M, 238);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor.apply(doc, SOFT);
+          doc.text("Exported " + new Date().toLocaleString(), M, 258);
+
+          const heads = list.filter((r) => (r.head_delegate || {}).name).length;
+          const people = list.reduce((n, r) => n + (Number(r.delegates) || 0), 0);
+          const byStatus = {};
+          list.forEach((r) => {
+            const k = r.status || "Pending";
+            byStatus[k] = (byStatus[k] || 0) + 1;
+          });
+
+          const darkTable = {
+            theme: "grid",
+            margin: { left: M, right: M },
+            styles: {
+              fontSize: 10,
+              cellPadding: { top: 8, bottom: 8, left: 12, right: 12 },
+              textColor: CREAM,
+              fillColor: PANEL,
+              lineColor: [28, 52, 90],
+              lineWidth: 0.5,
+            },
+            headStyles: {
+              fillColor: PINK,
+              textColor: [6, 18, 38],
+              fontStyle: "bold",
+            },
+            columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
+          };
+
+          doc.autoTable(
+            Object.assign({}, darkTable, {
+              startY: 296,
+              head: [["At a glance", ""]],
+              body: [
+                ["Delegations", String(list.length)],
+                ["Delegates in total", String(people)],
+                ["With a head delegate on file", String(heads)],
+              ].concat(Object.keys(byStatus).map((k) => [k, String(byStatus[k])])),
+            }),
+          );
+
+          const counts = {};
+          list.forEach((r) =>
+            realmsOf(r).forEach((k) => (counts[k] = (counts[k] || 0) + 1)),
+          );
+          const realmRows = Object.keys(counts)
+            .sort((a, b) => counts[b] - counts[a])
+            .map((k) => [realmName(k), String(counts[k])]);
+          if (realmRows.length)
+            doc.autoTable(
+              Object.assign({}, darkTable, {
+                startY: doc.lastAutoTable.finalY + 22,
+                head: [["Realm", "Delegations"]],
+                body: realmRows,
+              }),
+            );
+
+          // ---- a page per delegation
+          const lightTable = {
+            theme: "grid",
+            margin: { left: M, right: M },
+            styles: {
+              fontSize: 9.5,
+              cellPadding: { top: 6.5, bottom: 6.5, left: 10, right: 10 },
+              textColor: INK,
+              lineColor: RULE,
+              lineWidth: 0.5,
+              overflow: "linebreak",
+            },
+            headStyles: {
+              fillColor: PANEL,
+              textColor: CREAM,
+              fontStyle: "bold",
+              fontSize: 9.5,
+            },
+            alternateRowStyles: { fillColor: TINT },
+          };
+
+          const heading = (y, text) => {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9.5);
+            doc.setTextColor.apply(doc, PINK);
+            doc.text(text, M, y);
+            return y + 10;
+          };
+
+          list.forEach((r) => {
+            doc.addPage();
+            const h = r.head_delegate || {};
+            const others = Array.isArray(r.delegate_list) ? r.delegate_list : [];
+
+            doc.setFillColor.apply(doc, NAVY);
+            doc.rect(0, 0, W, 104, "F");
+            doc.setFont("times", "bold");
+            doc.setFontSize(19);
+            doc.setTextColor.apply(doc, CREAM);
+            const nameLines = doc.splitTextToSize(
+              String(r.school || "Unnamed school"),
+              FULL - 120,
+            );
+            doc.text(nameLines.slice(0, 2), M, 46);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9.5);
+            doc.setTextColor.apply(doc, SOFT);
+            doc.text(
+              "#" +
+                r.id +
+                "   Registered " +
+                (r.created_at ? new Date(r.created_at).toLocaleString() : "\u2014"),
+              M,
+              nameLines.length > 1 ? 88 : 72,
+            );
+
+            const status = r.status || "Pending";
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            const pw = doc.getTextWidth(status) + 22;
+            doc.setFillColor.apply(doc, PINK);
+            doc.roundedRect(W - M - pw, 30, pw, 22, 11, 11, "F");
+            doc.setTextColor(6, 18, 38);
+            doc.text(status, W - M - pw + 11, 45);
+
+            const keys = realmsOf(r);
+            doc.autoTable(
+              Object.assign({}, lightTable, {
+                startY: 128,
+                head: [["The school", ""]],
+                body: [
+                  ["School", r.school],
+                  ["School email", r.school_email],
+                  ["Team name", r.team_name],
+                  ["Delegates", r.delegates],
+                  ["Realms chosen", keys.length],
+                ].filter((row) => row[1] != null && row[1] !== ""),
+                columnStyles: {
+                  0: { cellWidth: 150, textColor: SOFT },
+                  1: { fontStyle: "bold" },
+                },
+              }),
+            );
+
+            doc.autoTable(
+              Object.assign({}, lightTable, {
+                startY: doc.lastAutoTable.finalY + 20,
+                head: [["Supervisor", ""]],
+                body: [
+                  ["Name", r.supervisor_name || r.contact_name],
+                  ["Number", r.supervisor_phone || r.phone],
+                  ["Email", r.supervisor_email || r.contact_email],
+                ].filter((row) => row[1]),
+                columnStyles: {
+                  0: { cellWidth: 150, textColor: SOFT },
+                  1: { fontStyle: "bold" },
+                },
+              }),
+            );
+
+            if (keys.length) {
+              const per = 3;
+              const body = [];
+              for (let i = 0; i < keys.length; i += per)
+                body.push(
+                  keys
+                    .slice(i, i + per)
+                    .map(realmName)
+                    .concat(new Array(per).fill(""))
+                    .slice(0, per),
+                );
+              doc.autoTable(
+                Object.assign({}, lightTable, {
+                  startY: doc.lastAutoTable.finalY + 20,
+                  head: [[{ content: "Realms", colSpan: per }]],
+                  body: body,
+                  styles: Object.assign({}, lightTable.styles, { fontSize: 9 }),
+                  alternateRowStyles: { fillColor: [255, 255, 255] },
+                }),
+              );
+            }
+
+            // ---- head delegate, photo beside the details
+            let y = doc.lastAutoTable.finalY + 26;
+            if (y > H - 190) {
+              doc.addPage();
+              y = 56;
+            }
+            y = heading(y, "Head delegate");
+
+            const box = 74;
+            const img = pic(h.photo);
+            doc.setFillColor.apply(doc, PANEL);
+            doc.roundedRect(M, y, box, box, 6, 6, "F");
+            if (img) doc.addImage(img, "JPEG", M, y, box, box);
+            else {
+              doc.setFont("helvetica", "bold");
+              doc.setFontSize(20);
+              doc.setTextColor.apply(doc, PINK);
+              doc.text(initialsOf(h.name) || "?", M + box / 2, y + box / 2 + 7, {
+                align: "center",
+              });
+            }
+
+            const headRows = [
+              ["Name", h.name],
+              ["Email", h.email],
+              ["Number", h.phone],
+              ["Student CNIC", h.cnic],
+              ["Parent CNIC", h.parentCnic],
+            ].filter((row) => row[1]);
+            if (!headRows.length) {
+              // an older registration from before these fields existed
+              doc.setFont("helvetica", "normal");
+              doc.setFontSize(9.5);
+              doc.setTextColor.apply(doc, SOFT);
+              doc.text("Not on file.", M + box + 14, y + 18);
+            }
+            doc.autoTable(
+              Object.assign({}, lightTable, {
+                startY: y,
+                margin: { left: M + box + 14, right: M },
+                head: false,
+                body: [
+                  ["Name", h.name],
+                  ["Email", h.email],
+                  ["Number", h.phone],
+                  ["Student CNIC", h.cnic],
+                  ["Parent CNIC", h.parentCnic],
+                ].filter((row) => row[1]),
+                styles: Object.assign({}, lightTable.styles, {
+                  fontSize: 9,
+                  cellPadding: { top: 4.6, bottom: 4.6, left: 10, right: 10 },
+                }),
+                columnStyles: {
+                  0: { cellWidth: 104, textColor: SOFT },
+                  1: { fontStyle: "bold" },
+                },
+              }),
+            );
+
+            // ---- the rest of the delegation
+            if (others.length) {
+              let y2 = Math.max(doc.lastAutoTable.finalY, y + box) + 26;
+              // rather than splitting the table and leaving a page nearly
+              // empty, start it fresh when the whole thing will not fit
+              if (y2 + 34 + others.length * 64 > H - 46) {
+                doc.addPage();
+                y2 = 56;
+              }
+              y2 = heading(y2, "The other delegates");
+
+              const shots = others.map((d) => pic(d && d.photo));
+              doc.autoTable(
+                Object.assign({}, lightTable, {
+                  startY: y2,
+                  head: [
+                    ["#", "", "Name", "Email", "Number", "Student CNIC", "Parent CNIC"],
+                  ],
+                  body: others.map((d, i) => [
+                    String(i + 2),
+                    "",
+                    (d && d.name) || "",
+                    (d && d.email) || "",
+                    (d && d.phone) || "",
+                    (d && d.cnic) || "",
+                    (d && d.parentCnic) || "",
+                  ]),
+                  styles: Object.assign({}, lightTable.styles, {
+                    fontSize: 8.5,
+                    cellPadding: { top: 8, bottom: 8, left: 6, right: 6 },
+                    valign: "middle",
+                  }),
+                  columnStyles: {
+                    0: { cellWidth: 22, halign: "center", textColor: SOFT },
+                    1: { cellWidth: 58 },
+                    2: { cellWidth: 84, fontStyle: "bold" },
+                    3: { cellWidth: 108 },
+                    // a CNIC is 15 characters and must not wrap
+                    4: { cellWidth: 78 },
+                    5: { cellWidth: 78 },
+                    6: { cellWidth: 78 },
+                  },
+                  didParseCell: (d) => {
+                    if (d.section === "body") d.cell.styles.minCellHeight = 64;
+                  },
+                  didDrawCell: (d) => {
+                    if (d.section !== "body" || d.column.index !== 1) return;
+                    const side = 50;
+                    const x = d.cell.x + (d.cell.width - side) / 2;
+                    const yy = d.cell.y + (d.cell.height - side) / 2;
+                    const shot = shots[d.row.index];
+                    doc.setFillColor.apply(doc, PANEL);
+                    doc.roundedRect(x, yy, side, side, 5, 5, "F");
+                    if (shot) doc.addImage(shot, "JPEG", x, yy, side, side);
+                    else {
+                      doc.setFont("helvetica", "bold");
+                      doc.setFontSize(14);
+                      doc.setTextColor.apply(doc, PINK);
+                      doc.text(
+                        initialsOf(others[d.row.index] && others[d.row.index].name) ||
+                          "?",
+                        x + side / 2,
+                        yy + side / 2 + 5,
+                        { align: "center" },
+                      );
+                    }
+                  },
+                }),
+              );
+            }
+          });
+
+          // ---- page numbers, skipping the cover
+          const pages = doc.internal.getNumberOfPages();
+          for (let i = 2; i <= pages; i++) {
+            doc.setPage(i);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.setTextColor.apply(doc, SOFT);
+            doc.text("RSIC 2026 \u00b7 Registrations", M, H - 24);
+            doc.text(i - 1 + " of " + (pages - 1), W - M, H - 24, {
+              align: "right",
+            });
+          }
+
+          return doc;
+        }
+
+        $("pdfBtn").addEventListener("click", async () => {
+          if (!rows.length)
+            return say($("tableMsg"), "Nothing to export yet.", false);
+          const btn = $("pdfBtn");
+          btn.disabled = true;
+          say($("tableMsg"), "Building the PDF...", true);
+          try {
+            await ensurePdf();
+            const doc = await buildPdf(rows);
+            doc.save(
+              "rsic-registrations-" + new Date().toISOString().slice(0, 10) + ".pdf",
+            );
+            say(
+              $("tableMsg"),
+              "Exported " +
+                rows.length +
+                " delegation" +
+                (rows.length > 1 ? "s" : "") +
+                " as a PDF.",
+              true,
+            );
+          } catch (e) {
+            say($("tableMsg"), e.message || "Could not build the PDF.", false);
+          } finally {
+            btn.disabled = false;
+          }
+        });
+
         $("csvBtn").addEventListener("click", () => {
           if (!rows.length)
             return say($("tableMsg"), "Nothing to export yet.", false);
