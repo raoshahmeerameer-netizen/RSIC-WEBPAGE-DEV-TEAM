@@ -10,7 +10,9 @@
   --edge-strong:rgba(243,238,232,.2);
   --text:#f3eee8;
   --text-soft:#a8b5c8;
-  --text-faint:#75839a;
+  /* lifted so it clears 4.5:1 on cards and raised panels too, not
+     just on the page background */
+  --text-faint:#8490a5;
   --pink:#d0768f;
   --pink-light:#e7a3b6;
   --blue:#7fb0e6;
@@ -674,7 +676,7 @@ a.org-node{text-decoration:none;display:block}
 .guide-box .btn[hidden]{display:none}
 
 /* ---- registration: files and the wider delegate rows ---- */
-.field-note{margin:8px 0 0;font:500 .82rem/1.4 var(--sans);color:var(--text-faint,var(--text-soft))}
+.field-note{margin:8px 0 0;font:500 .82rem/1.4 var(--sans);color:var(--text-soft)}
 .reg-field legend{padding:0;margin:0 0 14px;font:600 1.05rem/1.2 var(--serif);color:var(--pink)}
 input[type=file]{width:100%;padding:12px 14px;border-radius:var(--r-sm);background:var(--surface-2);
   border:1px solid rgba(243,238,232,.12);color:var(--text-soft);font:500 .88rem/1.3 var(--sans)}

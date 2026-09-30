@@ -779,7 +779,16 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 // base URL and there is no CORS to configure. Only public/ is ever served:
 // the backend source and node_modules sit outside it and cannot be requested.
 const SITE_DIR = path.join(__dirname, "..", "public");
-const sendPage = (res, file) => res.sendFile(path.join(SITE_DIR, file));
+const sendPage = (res, file) => {
+  // the dashboard is never worth caching; the public pages revalidate
+  res.setHeader(
+    "Cache-Control",
+    /^(admin|advanced)\.html$/.test(file)
+      ? "no-store"
+      : "public, max-age=0, must-revalidate",
+  );
+  res.sendFile(path.join(SITE_DIR, file));
+};
 
 // The dashboard answers at /admindashboard and nowhere else. Nothing on the
 // site links to it; you reach it by typing the address.
@@ -810,6 +819,22 @@ app.use(
     extensions: ["html"],
     index: "index.html",
     dotfiles: "ignore",
+    setHeaders: (res, filePath) => {
+      // Pictures and icons do not change without changing their name.
+      const web = filePath.split(path.sep).join("/");
+      if (web.includes("/assets/"))
+        return res.setHeader(
+          "Cache-Control",
+          "public, max-age=31536000, immutable",
+        );
+      // The stylesheet and the script were being fetched again on every one
+      // of the 29 pages. Five minutes saves that without making a deploy take
+      // long to reach anyone.
+      if (/\.(css|js)$/.test(filePath))
+        return res.setHeader("Cache-Control", "public, max-age=300");
+      // Pages always get checked, so dashboard edits show up straight away.
+      res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+    },
   }),
 );
 
@@ -818,6 +843,18 @@ app.use((req, res) => {
     return res.status(404).json({ error: "Not found" });
   res.status(404).sendFile(path.join(SITE_DIR, "404.html"), (err) => {
     if (err) res.status(404).type("text/plain").send("Page not found");
+  });
+});
+
+// Last resort. NODE_ENV is not set on the host, so Express's own handler
+// would put a stack trace in front of a visitor. This one never does.
+app.use((err, req, res, _next) => {
+  console.error("unhandled:", (err && err.stack) || err);
+  if (res.headersSent) return;
+  if (req.path.startsWith("/api/"))
+    return res.status(500).json({ error: "Something went wrong." });
+  res.status(500).sendFile(path.join(SITE_DIR, "500.html"), (e) => {
+    if (e) res.status(500).type("text/plain").send("Something went wrong.");
   });
 });
 
