@@ -995,7 +995,12 @@ const rsicEscape = (s) =>
 
 const rsicSafeUrl = (v) => {
   const s = String(v).trim();
-  return /^https?:\/\//i.test(s) || s.startsWith("/") ? s : "";
+  if (/^https?:\/\//i.test(s)) return s;
+  // A path on this site. "//host" and "/\\host" are not paths: a browser
+  // reads them as another site, so a dashboard field could have pointed a
+  // logo or a download at somebody else's server.
+  if (s.startsWith("/") && !/^[/\\]{2}/.test(s)) return s;
+  return "";
 };
 
 const rsicSetText = (el, value) => {

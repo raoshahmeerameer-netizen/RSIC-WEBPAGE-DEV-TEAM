@@ -31,11 +31,35 @@ if (missing.length) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const app = express();
 
+// Hostinger's CDN (Server: hcdn) sits in front, so without this every request
+// looks like it comes from the same address: the login throttle would be
+// global and eleven bad guesses from anyone would lock the owner out.
+app.set("trust proxy", 1);
+
+// Headers the CDN does not set for us.
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader(
+    "Permissions-Policy",
+    "geolocation=(), microphone=(), camera=(), payment=()",
+  );
+  res.setHeader(
+    "Strict-Transport-Security",
+    "max-age=31536000; includeSubDomains",
+  );
+  next();
+});
+
+// The pages call /api/... on their own origin, so nothing needs CORS. Left
+// open it reflected whatever Origin was sent, which let any site on the web
+// post to /api/register and hammer /api/admin/login from someone's browser.
 app.use(
   cors({
     origin: ALLOWED_ORIGINS
       ? ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-      : true,
+      : false,
   }),
 );
 app.use(express.json({ limit: "64kb" }));
@@ -234,6 +258,20 @@ const REALM_KEYS = [
   "psych","business","film","law","robotics",
 ];
 
+// Five registrations per address per hour.
+const postTries = new Map();
+const tooManyPosts = (ip) => {
+  const now = Date.now();
+  const entry = postTries.get(ip) || { count: 0, until: now + 36e5 };
+  if (entry.until < now) {
+    entry.count = 0;
+    entry.until = now + 36e5;
+  }
+  entry.count += 1;
+  postTries.set(ip, entry);
+  return entry.count > 5;
+};
+
 app.post("/api/register", upload.any(), async (req, res) => {
   try {
     // the form sends everything else as one JSON field alongside the files
@@ -268,6 +306,12 @@ app.post("/api/register", upload.any(), async (req, res) => {
       return res
         .status(429)
         .json({ error: "Just a moment, that was sent twice." });
+    // A delegation registers once. Without a ceiling, one script could fill
+    // the table and push tens of megabytes of photos into storage.
+    if (tooManyPosts(req.ip))
+      return res.status(429).json({
+        error: "That is a lot of registrations from one place. Try again later.",
+      });
 
     // The same limits the form uses, read from the admin's settings so the two
     // can never drift apart.
@@ -706,6 +750,9 @@ app.get(["/team", "/team/"], (_req, res) => sendPage(res, "team.html"));
 // One address per page: /about, never /about.html.
 app.get(/^\/(.+)\.html$/, (req, res) => {
   const clean = "/" + req.params[0];
+  // "//evil.example/x.html" would otherwise redirect off the site entirely,
+  // because a browser reads a leading // as "any host". Same for /\\.
+  if (/^[/\\]{2}/.test(clean)) return res.redirect(301, "/");
   res.redirect(301, clean === "/index" ? "/" : clean);
 });
 
