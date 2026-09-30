@@ -1393,17 +1393,34 @@
         // A printable record of every delegation: the school, the supervisor,
         // the realms and a row per delegate with their photo. The libraries are
         // only fetched the first time somebody exports.
+        // Pinned to an exact version and an exact hash. This page holds the
+        // admin token and students' details, so a CDN that served something
+        // other than these bytes must not run here: the browser checks the
+        // hash and refuses the script if it does not match.
         const PDF_LIBS = [
-          "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
-          "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js",
+          [
+            "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+            "sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==",
+          ],
+          [
+            "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js",
+            "sha512-PRJxIx+FR3gPzyBBl9cPt62DD7owFXVcfYv0CRNFAcLZeEYfht/PpPNTKHicPs+hQlULFhH2tTWdoxnd1UGu1g==",
+          ],
         ];
         let pdfLibs = null;
-        const loadScript = (src) =>
+        const loadScript = ([src, integrity]) =>
           new Promise((ok, bad) => {
             const el = document.createElement("script");
             el.src = src;
+            el.integrity = integrity;
+            el.crossOrigin = "anonymous";
             el.onload = ok;
-            el.onerror = () => bad(new Error("Could not reach the PDF library."));
+            el.onerror = () =>
+              bad(
+                new Error(
+                  "The PDF library would not load, or did not match its expected contents.",
+                ),
+              );
             document.head.appendChild(el);
           });
         const ensurePdf = () =>
