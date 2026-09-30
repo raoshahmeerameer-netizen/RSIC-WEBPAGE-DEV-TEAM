@@ -296,7 +296,14 @@ app.post("/api/register", upload.any(), async (req, res) => {
         return res.status(400).json({
           error: "Every delegate needs a CNIC, their own or a parent's.",
         });
-      delegateList.push({ name, email: pEmail, phone: pPhone, cnic: pCnic });
+      const pParent = String((person && person.parentCnic) || "").trim().slice(0, 30);
+      if (!pParent)
+        return res.status(400).json({
+          error: "Every delegate needs a parent CNIC as well as their own.",
+        });
+      delegateList.push({
+        name, email: pEmail, phone: pPhone, cnic: pCnic, parentCnic: pParent,
+      });
     }
 
     // unknown keys are dropped, duplicates collapsed, compulsory ones always added
@@ -328,7 +335,8 @@ app.post("/api/register", upload.any(), async (req, res) => {
       [head.name, "The head delegate's name"],
       [head.email, "The head delegate's email"],
       [head.phone, "The head delegate's number"],
-      [head.cnic, "The head delegate's CNIC"],
+      [head.cnic, "The head delegate's student CNIC"],
+      [head.parentCnic, "The head delegate's parent CNIC"],
     ])
       if (!String(v || "").trim())
         return res.status(400).json({ error: label + " is required." });
@@ -373,6 +381,7 @@ app.post("/api/register", upload.any(), async (req, res) => {
         email: clip(head.email, 160),
         phone: clip(head.phone, 40),
         cnic: clip(head.cnic, 30),
+        parentCnic: clip(head.parentCnic, 30),
         photo: headPhoto,
       },
       files_folder: folder,

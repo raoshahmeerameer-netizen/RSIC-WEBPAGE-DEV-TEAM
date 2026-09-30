@@ -1121,13 +1121,17 @@ if (regForm) {
       email: row.querySelector('[data-f="email"]').value.trim(),
       phone: row.querySelector('[data-f="phone"]').value.trim(),
       cnic: row.querySelector('[data-f="cnic"]').value.trim(),
+      parentCnic: row.querySelector('[data-f="parentCnic"]').value.trim(),
     }));
 
   const peopleOk = () => {
     const rows = peopleValues();
     return (
       rows.length === Math.max(0, parseInt(delegates.value, 10) - 1) &&
-      rows.every((p, i) => p.name && p.email && p.phone && p.cnic && photoFiles[i])
+      rows.every(
+        (p, i) =>
+          p.name && p.email && p.phone && p.cnic && p.parentCnic && photoFiles[i],
+      )
     );
   };
 
@@ -1141,7 +1145,9 @@ if (regForm) {
 
     const rows = [];
     for (let i = 0; i < wanted; i++) {
-      const had = kept[i] || { name: "", email: "", phone: "", cnic: "" };
+      const had = kept[i] || {
+        name: "", email: "", phone: "", cnic: "", parentCnic: "",
+      };
       const row = document.createElement("div");
       row.className = "person";
       row.innerHTML =
@@ -1164,9 +1170,14 @@ if (regForm) {
         'p" data-f="phone" type="tel" autocomplete="off"></div>' +
         '<div class="field"><label for="p' +
         i +
-        'i">CNIC (delegate or parent)</label><input id="p' +
+        'i">Student CNIC</label><input id="p' +
         i +
         'i" data-f="cnic" type="text" inputmode="numeric" autocomplete="off"></div>' +
+        '<div class="field"><label for="p' +
+        i +
+        'q">Parent CNIC</label><input id="p' +
+        i +
+        'q" data-f="parentCnic" type="text" inputmode="numeric" autocomplete="off"></div>' +
         '<div class="field"><label for="p' +
         i +
         'f">Photo</label><input id="p' +
@@ -1176,6 +1187,7 @@ if (regForm) {
       row.querySelector('[data-f="email"]').value = had.email || "";
       row.querySelector('[data-f="phone"]').value = had.phone || "";
       row.querySelector('[data-f="cnic"]').value = had.cnic || "";
+      row.querySelector('[data-f="parentCnic"]').value = had.parentCnic || "";
       const photo = row.querySelector('[data-f="photo"]');
       const note = document.createElement("small");
       note.className = "person-file";
@@ -1259,7 +1271,9 @@ if (regForm) {
     if (!value("s-head-name")) problems.push("the head delegate's name");
     if (!value("s-head-email")) problems.push("the head delegate's email");
     if (!value("s-head-phone")) problems.push("the head delegate's number");
-    if (!value("s-head-cnic")) problems.push("the head delegate's CNIC");
+    if (!value("s-head-cnic")) problems.push("the head delegate's student CNIC");
+    if (!value("s-head-parent-cnic"))
+      problems.push("the head delegate's parent CNIC");
     if (!file("s-head-photo")) problems.push("a photo of the head delegate");
 
     if (!delegatesOk())
@@ -1271,7 +1285,9 @@ if (regForm) {
         "between " + rules.realmsMin + " and " + rules.realmsMax + " realms",
       );
     if (delegatesOk() && !peopleOk())
-      problems.push("a name, email, number, CNIC and photo for every other delegate");
+      problems.push(
+        "a name, email, number, both CNICs and a photo for every other delegate",
+      );
 
     if (problems.length) {
       regStatus.className = "reg-status is-bad";
@@ -1296,6 +1312,7 @@ if (regForm) {
         email: value("s-head-email"),
         phone: value("s-head-phone"),
         cnic: value("s-head-cnic"),
+        parentCnic: value("s-head-parent-cnic"),
       },
       delegates: value("s-delegates"),
       realms: boxes.filter((b) => b.checked).map((b) => b.value),

@@ -131,9 +131,15 @@
                   <input id="s-head-phone" name="head_phone" type="tel" autocomplete="off" required />
                 </div>
               </div>
-              <div class="field">
-                <label for="s-head-cnic">CNIC (delegate or parent)</label>
-                <input id="s-head-cnic" name="head_cnic" type="text" inputmode="numeric" autocomplete="off" required />
+              <div class="field-row">
+                <div class="field">
+                  <label for="s-head-cnic">Student CNIC / B-Form</label>
+                  <input id="s-head-cnic" name="head_cnic" type="text" inputmode="numeric" autocomplete="off" required />
+                </div>
+                <div class="field">
+                  <label for="s-head-parent-cnic">Parent CNIC</label>
+                  <input id="s-head-parent-cnic" name="head_parent_cnic" type="text" inputmode="numeric" autocomplete="off" required />
+                </div>
               </div>
               <div class="field">
                 <label for="s-head-photo">Photo</label>
@@ -155,7 +161,7 @@
             <fieldset class="reg-field active reg-people" id="peopleField" hidden>
               <legend class="reg-legend">Your delegates</legend>
               <p class="field-hint" id="peopleHint">
-                Name, email, number, CNIC and photo for every delegate except the
+                Name, email, number, student and parent CNIC, and a photo for every delegate except the
                 head delegate. Set the number above and the rows appear here.
               </p>
               <div class="people-list" id="peopleList"></div>

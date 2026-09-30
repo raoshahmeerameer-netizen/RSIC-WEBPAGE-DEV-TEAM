@@ -1005,6 +1005,7 @@
             ["Head delegate email", head.email || "—"],
             ["Head delegate number", head.phone || "—"],
             ["Head delegate CNIC", head.cnic || "—"],
+            ["Head delegate parent CNIC", head.parentCnic || "—"],
             ["Delegates", row.delegates == null ? "—" : row.delegates],
             [
               "Realms",
@@ -1075,13 +1076,14 @@
             who.replaceChildren(
               ...people.map((p, i) => {
                 const li = document.createElement("li");
+                // age and class were dropped from registration; printing
+                // them left a trail of empty dashes on every delegate
                 li.textContent =
                   i + 1 + ". " + (p.name || "—") +
-                  " · age " + (p.age == null ? "—" : p.age) +
-                  " · " + (p.class || "—") +
                   (p.email ? " · " + p.email : "") +
                   (p.phone ? " · " + p.phone : "") +
-                  (p.cnic ? " · CNIC " + p.cnic : "");
+                  (p.cnic ? " · CNIC " + p.cnic : "") +
+                  (p.parentCnic ? " · parent " + p.parentCnic : "");
                 const ph = fileLink("photo", p.photo);
                 if (ph) li.append(" ", ph);
                 return li;
@@ -1412,6 +1414,7 @@
             "Head delegate email",
             "Head delegate number",
             "Head delegate CNIC",
+            "Head delegate parent CNIC",
             "Head delegate photo",
           ];
           for (let i = 1; i <= others; i++)
@@ -1420,6 +1423,7 @@
               "Delegate " + (i + 1) + " email",
               "Delegate " + (i + 1) + " number",
               "Delegate " + (i + 1) + " CNIC",
+              "Delegate " + (i + 1) + " parent CNIC",
               "Delegate " + (i + 1) + " photo",
             );
 
@@ -1443,12 +1447,13 @@
               h.email,
               h.phone,
               h.cnic,
+              h.parentCnic,
               h.photo,
             ];
             const list = Array.isArray(r.delegate_list) ? r.delegate_list : [];
             for (let i = 0; i < others; i++) {
               const d = list[i] || {};
-              out.push(d.name, d.email, d.phone, d.cnic, d.photo);
+              out.push(d.name, d.email, d.phone, d.cnic, d.parentCnic, d.photo);
             }
             return out;
           };
