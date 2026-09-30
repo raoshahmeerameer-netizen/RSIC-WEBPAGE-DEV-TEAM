@@ -83,7 +83,37 @@ const EXT = {
 
 // Supabase also enforces the bucket's own mime allow-list, so a forged
 // Content-Type still cannot land something unexpected in the bucket.
+// A browser sets Content-Type itself, so an executable renamed to .jpg and
+// sent as image/jpeg would pass a type check. These are the first bytes each
+// format actually starts with.
+const looksLike = (buf, mime) => {
+  if (!buf || buf.length < 12) return false;
+  if (mime === "image/jpeg") return buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+  if (mime === "image/png")
+    return [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every(
+      (b, i) => buf[i] === b,
+    );
+  if (mime === "application/pdf")
+    return buf.subarray(0, 4).toString("latin1") === "%PDF";
+  if (mime === "image/webp")
+    return (
+      buf.subarray(0, 4).toString("latin1") === "RIFF" &&
+      buf.subarray(8, 12).toString("latin1") === "WEBP"
+    );
+  return false;
+};
+
+const userError = (msg) => Object.assign(new Error(msg), { userFacing: true });
+
+const assertRealFile = (file, label) => {
+  if (!looksLike(file.buffer, file.mimetype))
+    throw userError(
+      (label || "That file") + " is not the kind of file it claims to be.",
+    );
+};
+
 const putFile = async (bucket, path, file) => {
+  assertRealFile(file);
   const { error } = await supabase.storage
     .from(bucket)
     .upload(path, file.buffer, { contentType: file.mimetype, upsert: false });
@@ -238,7 +268,8 @@ app.patch("/api/content", requireAdmin, async (req, res) => {
   for (const [key, value] of entries) {
     const { error } = await supabase
       .from("site_content")
-      .update({ value: String(value) })
+      // the longest real value on the site is under 500 characters
+      .update({ value: String(value).slice(0, 8000) })
       .eq("key", key);
     if (error) return res.status(500).json({ error: error.message });
   }
@@ -271,6 +302,15 @@ const tooManyPosts = (ip) => {
   postTries.set(ip, entry);
   return entry.count > 5;
 };
+
+// These maps held one entry per address for the life of the process. Sweep
+// the expired ones so a long-running server does not creep upwards.
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of loginTries) if (v.until < now) loginTries.delete(k);
+  for (const [k, v] of postTries) if (v.until < now) postTries.delete(k);
+  for (const [t, expires] of sessions) if (expires < now) sessions.delete(t);
+}, 6e5).unref();
 
 app.post("/api/register", upload.any(), async (req, res) => {
   try {
@@ -497,6 +537,8 @@ app.post("/api/register", upload.any(), async (req, res) => {
       message: content["registration.thanks"] || "Registration received.",
     });
   } catch (err) {
+    // things the person can actually fix say so; anything else stays vague
+    if (err.userFacing) return res.status(400).json({ error: err.message });
     console.error("register:", err.message);
     res.status(500).json({ error: "Something went wrong. Try again." });
   }
@@ -583,6 +625,8 @@ app.post("/api/admin/guide", requireAdmin, upload.single("guide"), async (req, r
   if (!req.file) return res.status(400).json({ error: "No file." });
   if (req.file.mimetype !== "application/pdf")
     return res.status(400).json({ error: "The study guide must be a PDF." });
+  if (!looksLike(req.file.buffer, req.file.mimetype))
+    return res.status(400).json({ error: "That file is not really a PDF." });
 
   const path = realm + ".pdf";
   const { error } = await supabase.storage
@@ -616,16 +660,19 @@ app.post("/api/admin/logo", requireAdmin, upload.single("logo"), async (req, res
   if (!REALM_KEYS.includes(realm))
     return res.status(400).json({ error: "Unknown realm." });
   if (!req.file) return res.status(400).json({ error: "No file." });
-  if (!["image/png", "image/webp"].includes(req.file.mimetype))
+  if (
+    !["image/png", "image/webp"].includes(req.file.mimetype) ||
+    !looksLike(req.file.buffer, req.file.mimetype)
+  )
     return res.status(400).json({ error: "The logo must be a PNG or WebP." });
 
   const path = "logos/" + realm + "." + EXT[req.file.mimetype];
   const { error } = await supabase.storage
-    .from("study-guides")
+    .from("realm-logos")
     .upload(path, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
   if (error) return res.status(500).json({ error: error.message });
 
-  const { data } = supabase.storage.from("study-guides").getPublicUrl(path);
+  const { data } = supabase.storage.from("realm-logos").getPublicUrl(path);
   const { error: e2 } = await supabase.from("site_content").upsert(
     {
       key: "realm." + realm + ".logo",
@@ -647,7 +694,7 @@ app.delete("/api/admin/logo", requireAdmin, async (req, res) => {
   if (!REALM_KEYS.includes(realm))
     return res.status(400).json({ error: "Unknown realm." });
   await supabase.storage
-    .from("study-guides")
+    .from("realm-logos")
     .remove(["logos/" + realm + ".png", "logos/" + realm + ".webp"]);
   await supabase
     .from("site_content")
@@ -671,6 +718,8 @@ app.post("/api/admin/document", requireAdmin, upload.single("doc"), async (req, 
   if (!req.file) return res.status(400).json({ error: "No file." });
   if (req.file.mimetype !== "application/pdf")
     return res.status(400).json({ error: "The form must be a PDF." });
+  if (!looksLike(req.file.buffer, req.file.mimetype))
+    return res.status(400).json({ error: "That file is not really a PDF." });
 
   const path = which + ".pdf";
   const { error } = await supabase.storage
