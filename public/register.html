@@ -80,7 +80,7 @@
           <form id="registrationForm" novalidate>
             <input type="hidden" name="route" value="school" />
             <fieldset class="reg-field active">
-              <legend>The school</legend>
+              <legend data-step="1">The school</legend>
               <div class="field">
                 <label for="s-school">School / institution name</label>
                 <input id="s-school" name="school" type="text" autocomplete="organization" required />
@@ -98,7 +98,7 @@
             </fieldset>
 
             <fieldset class="reg-field active">
-              <legend>Supervisor</legend>
+              <legend data-step="2">Supervisor</legend>
               <div class="field">
                 <label for="s-sup-name">Supervisor name</label>
                 <input id="s-sup-name" name="supervisor_name" type="text" autocomplete="name" required />
@@ -116,7 +116,7 @@
             </fieldset>
 
             <fieldset class="reg-field active">
-              <legend>Head delegate</legend>
+              <legend data-step="3">Head delegate</legend>
               <div class="field">
                 <label for="s-head-name">Full name</label>
                 <input id="s-head-name" name="head_name" type="text" autocomplete="off" required />
@@ -149,7 +149,7 @@
             </fieldset>
 
             <fieldset class="reg-field active">
-              <legend>Delegation size</legend>
+              <legend data-step="4">Delegation size</legend>
               <div class="field">
                 <label for="s-delegates">Number of delegates</label>
                 <input id="s-delegates" name="delegates" type="number" inputmode="numeric" min="5" max="7" required />
@@ -168,7 +168,7 @@
             </fieldset>
 
             <fieldset class="reg-field active reg-realms">
-              <legend class="reg-legend">Realms</legend>
+              <legend class="reg-legend" data-step="5">Realms</legend>
               <p class="field-hint" id="realmsNote" data-cms="registration.realms_note">Project Nexus and Gaia's Exchange are compulsory for every delegation. Pick the rest yourself.</p>
 
               <p class="realm-pick-head">Compulsory</p>

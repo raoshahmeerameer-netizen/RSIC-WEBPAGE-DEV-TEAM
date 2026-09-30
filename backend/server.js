@@ -162,6 +162,49 @@ app.get("/api/content/all", requireAdmin, async (_req, res) => {
   res.json({ content: data });
 });
 
+// Text the advanced editor picked off a page. These pieces have no data-cms of
+// their own, so the key carries the page and the element's position path and the
+// row has to be created the first time it is edited.
+const AUTO_KEY = /^auto:(\*|\/[a-z0-9\-\/]*)::[a-z0-9>:()\-]{3,300}$/;
+
+app.put("/api/content/auto", requireAdmin, async (req, res) => {
+  const body = req.body || {};
+  const key = String(body.key || "");
+  const value = String(body.value == null ? "" : body.value);
+  const label = String(body.label || "").slice(0, 120);
+  if (key.length > 400 || !AUTO_KEY.test(key))
+    return res.status(400).json({ error: "That is not a piece of text I can save." });
+  if (value.length > 4000)
+    return res.status(400).json({ error: "That text is too long." });
+
+  const { error } = await supabase.from("site_content").upsert(
+    {
+      key,
+      value,
+      label: label || "Extra text",
+      category: "Extra text",
+      input: "textarea",
+      position: 1,
+    },
+    { onConflict: "key" },
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  await loadContent(true);
+  res.json({ ok: true });
+});
+
+// Putting a piece back means dropping the row, so the page shows whatever is
+// written in the HTML again.
+app.delete("/api/content/auto", requireAdmin, async (req, res) => {
+  const key = String(req.query.key || "");
+  if (key.length > 400 || !AUTO_KEY.test(key))
+    return res.status(400).json({ error: "That is not a piece of text I can reset." });
+  const { error } = await supabase.from("site_content").delete().eq("key", key);
+  if (error) return res.status(500).json({ error: error.message });
+  await loadContent(true);
+  res.json({ ok: true });
+});
+
 app.patch("/api/content", requireAdmin, async (req, res) => {
   const updates = req.body && req.body.updates;
   if (!updates || typeof updates !== "object")

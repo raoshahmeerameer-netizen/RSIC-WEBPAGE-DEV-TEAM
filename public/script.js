@@ -1032,6 +1032,28 @@ const rsicContentReady = (async () => {
         if (box) box.classList.add("has-photo");
       }
     });
+    // Text picked straight off the page in the advanced editor. These pieces
+    // have no data-cms of their own, so the key carries the page and the
+    // element's position path.
+    const here = location.pathname.replace(/\/+$/, "") || "/";
+    Object.keys(content).forEach((k) => {
+      if (k.slice(0, 5) !== "auto:") return;
+      const cut = k.indexOf("::");
+      if (cut < 0) return;
+      // "*" means the header and footer, which every page shares
+      const scope = k.slice(5, cut);
+      if (scope !== "*" && scope !== here) return;
+      const v = content[k];
+      if (v == null || v === "") return;
+      let el = null;
+      try {
+        el = document.querySelector(k.slice(cut + 2));
+      } catch (err) {
+        return;
+      }
+      if (el && !el.dataset.cms) rsicSetText(el, v);
+    });
+
     const noneNote = document.getElementById("formsNone");
     if (noneNote)
       noneNote.hidden = [...document.querySelectorAll("[data-cms-href]")].some(

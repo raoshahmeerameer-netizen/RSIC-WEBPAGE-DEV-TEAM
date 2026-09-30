@@ -102,6 +102,40 @@
       .adv-wrap:not(.editing) .adv-editor {
         display: none;
       }
+      .adv-kinds {
+        display: flex;
+        gap: 14px;
+        margin: 0;
+        font: 500 0.78rem/1.4 var(--sans);
+        color: var(--text-soft);
+      }
+      .adv-kinds b {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        margin-right: 6px;
+        border-radius: 3px;
+        vertical-align: -1px;
+      }
+      .adv-kinds .k-cms b {
+        background: #d0768f;
+      }
+      .adv-kinds .k-auto b {
+        background: #7fb0e6;
+      }
+      .adv-editor h2 {
+        margin: 0 0 4px;
+        font: 600 1.05rem/1.3 var(--serif);
+      }
+      .adv-editor .adv-kind {
+        display: inline-block;
+        margin-bottom: 10px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        font: 600 0.72rem/1.4 var(--sans);
+        background: var(--surface-2);
+        color: var(--text-soft);
+      }
       .adv-editor small {
         display: block;
         font: 600 0.74rem/1.3 var(--sans);
@@ -173,6 +207,10 @@
         <p class="adv-hint" id="advCount">
           Click any text on the preview to change it.
         </p>
+        <p class="adv-kinds">
+          <span class="k-cms"><b></b>Named field</span>
+          <span class="k-auto"><b></b>Picked off the page</span>
+        </p>
         <span class="spacer"></span>
         <a class="action-btn ghost" href="/admindashboard">Back to dashboard</a>
       </header>
@@ -185,6 +223,8 @@
         </div>
 
         <aside class="adv-editor" id="advEditor" aria-label="Edit text">
+          <h2 id="advTitle">Edit this text</h2>
+          <span class="adv-kind" id="advKind"></span>
           <small id="advKey"></small>
           <div class="field">
             <label for="advValue">Text</label>
@@ -198,6 +238,9 @@
             <button class="action-btn" type="button" id="advSave">Save</button>
             <button class="action-btn ghost" type="button" id="advCancel">
               Cancel
+            </button>
+            <button class="action-btn ghost" type="button" id="advReset" hidden>
+              Put it back
             </button>
           </div>
           <p class="adv-msg" id="advMsg" role="status"></p>
@@ -250,7 +293,99 @@
         ];
 
         let content = {};
-        let current = null;
+        let current = null; // the piece being edited
+
+        // Elements that only ever hold a phrase inside a sentence. An element
+        // that carries its own text and nothing but these is edited whole, so
+        // "Ten worlds. *One event.*" stays one piece.
+        const INLINE = new Set([
+          "EM", "I", "B", "STRONG", "SMALL", "SPAN", "A", "CODE", "SUP", "SUB", "U",
+        ]);
+        const SKIP_TAGS = new Set([
+          "SCRIPT", "STYLE", "CANVAS", "SVG", "NOSCRIPT", "IFRAME", "OPTION",
+          "INPUT", "TEXTAREA", "SELECT", "TITLE", "IMG", "BR", "HR",
+        ]);
+        // Parts the site's own script rewrites after load. Editing them would
+        // be undone the moment the page runs, so they are left alone.
+        const SKIP_INSIDE = [
+          ".logo", ".wm", "[data-countdown]", ".countdown-grid", ".hero h1",
+          "#peopleList", "#realmTally", "#regStatus", "#delegatesHint",
+          "#formsNone", ".lab-pattern", ".glyph", "svg",
+        ].join(",");
+
+        // The stored form of a piece of text: the words, with *stars* around
+        // anything already italic, so saving never drops the pink phrase.
+        function toSource(el) {
+          let out = "";
+          el.childNodes.forEach((n) => {
+            if (n.nodeType === 3) out += n.nodeValue;
+            else if (n.tagName === "EM" || n.tagName === "I")
+              out += "*" + n.textContent + "*";
+            else out += n.textContent;
+          });
+          return out.replace(/\s+/g, " ").trim();
+        }
+
+        // body > tag:nth-of-type(n) > ... . Position based, because these
+        // pieces have no name of their own in the database.
+        function pathOf(el) {
+          const parts = [];
+          for (let n = el; n && n.tagName !== "BODY"; n = n.parentElement) {
+            let i = 1;
+            for (let sib = n.previousElementSibling; sib; sib = sib.previousElementSibling)
+              if (sib.tagName === n.tagName) i++;
+            parts.unshift(n.tagName.toLowerCase() + ":nth-of-type(" + i + ")");
+          }
+          return "body>" + parts.join(">");
+        }
+
+        function pageKey(doc) {
+          return (doc.location.pathname || "/").replace(/\/+$/, "") || "/";
+        }
+
+        // A piece of text is an element that carries its own words and whose
+        // children are only inline dressing. Anything bigger is descended into,
+        // so you get the sentence rather than the whole section.
+        function collect(doc) {
+          const found = [];
+          const page = pageKey(doc);
+
+          const walk = (el) => {
+            if (!el || SKIP_TAGS.has(el.tagName)) return;
+
+            const kids = [...el.children];
+            const ownText = [...el.childNodes].some(
+              (n) => n.nodeType === 3 && n.nodeValue.trim(),
+            );
+            const dressingOnly = kids.every(
+              (k) => INLINE.has(k.tagName) && !k.children.length,
+            );
+            const named = el.dataset && el.dataset.cms;
+
+            if ((named || (ownText && dressingOnly)) && el.textContent.trim()) {
+              if (!el.querySelector("br")) {
+                const source = toSource(el);
+                found.push({
+                  el,
+                  kind: named ? "cms" : "auto",
+                  key:
+                    named ||
+                    "auto:" +
+                      (el.closest(".site-head,.site-foot") ? "*" : page) +
+                      "::" +
+                      pathOf(el),
+                  label: source.slice(0, 60),
+                  source,
+                });
+              }
+              return; // do not also offer the pieces inside it
+            }
+            kids.forEach(walk);
+          };
+
+          [...doc.body.children].forEach(walk);
+          return found.filter((p) => !p.el.closest(SKIP_INSIDE));
+        }
 
         async function loadContent() {
           const r = await fetch(API("/api/content"));
@@ -270,10 +405,23 @@
           say("", true);
         }
 
-        function openEditor(key) {
-          current = key;
-          $("advKey").textContent = key;
-          $("advValue").value = content[key] != null ? content[key] : "";
+        function openEditor(piece) {
+          current = piece;
+          const stored = content[piece.key];
+          $("advTitle").textContent =
+            piece.kind === "cms" ? "Named field" : "Text on this page";
+          $("advKind").textContent =
+            piece.kind === "cms"
+              ? "Also in the dashboard's Site text tab"
+              : piece.key.slice(0, 7) === "auto:*:"
+                ? "Header or footer, so this changes on every page"
+                : "Tied to where it sits on the page";
+          $("advKey").textContent = piece.key;
+          // a named field keeps whatever is stored; a picked piece starts from
+          // the words already on the page
+          $("advValue").value =
+            stored != null && stored !== "" ? stored : piece.source;
+          $("advReset").hidden = !(piece.kind === "auto" && stored != null);
           $("advWrap").classList.add("editing");
           say("", true);
           $("advValue").focus();
@@ -285,33 +433,46 @@
 
           const style = doc.createElement("style");
           style.textContent =
-            "[data-cms]{outline:1px dashed rgba(208,118,143,.55);outline-offset:3px;cursor:pointer}" +
-            "[data-cms]:hover{outline:2px solid #d0768f;background:rgba(208,118,143,.12)}" +
-            "[data-cms].adv-live{outline:2px solid #e7a3b6}";
+            ".adv-pick{outline:1px dashed rgba(208,118,143,.5);outline-offset:3px;cursor:pointer}" +
+            ".adv-pick.adv-auto{outline-color:rgba(127,176,230,.5)}" +
+            ".adv-pick:hover{outline:2px solid #d0768f;background:rgba(208,118,143,.12)}" +
+            ".adv-pick.adv-auto:hover{outline-color:#7fb0e6;background:rgba(127,176,230,.12)}" +
+            ".adv-pick.adv-live{outline:2px solid #e7a3b6}";
           doc.head.appendChild(style);
+
+          const pieces = collect(doc);
+          pieces.forEach((p) => {
+            p.el.classList.add("adv-pick");
+            if (p.kind === "auto") p.el.classList.add("adv-auto");
+          });
 
           doc.addEventListener(
             "click",
             (e) => {
-              const el = e.target.closest("[data-cms]");
-              const link = e.target.closest("a");
-              if (el || link) {
+              const el = e.target.closest(".adv-pick");
+              if (el || e.target.closest("a")) {
                 e.preventDefault();
                 e.stopPropagation();
               }
               if (!el) return;
               doc
-                .querySelectorAll("[data-cms].adv-live")
+                .querySelectorAll(".adv-live")
                 .forEach((n) => n.classList.remove("adv-live"));
               el.classList.add("adv-live");
-              openEditor(el.dataset.cms);
+              const piece = pieces.find((p) => p.el === el);
+              if (piece) openEditor(piece);
             },
             true,
           );
 
-          const n = doc.querySelectorAll("[data-cms]").length;
+          const named = pieces.filter((p) => p.kind === "cms").length;
           $("advCount").textContent =
-            n + " editable pieces of text on this page. Click one to change it.";
+            pieces.length +
+            " pieces of text here: " +
+            named +
+            " named, " +
+            (pieces.length - named) +
+            " picked off the page. Click one to change it.";
         }
 
         function show(path, btn) {
@@ -320,6 +481,11 @@
             .forEach((b) => b.classList.toggle("active", b === btn));
           closeEditor();
           $("advFrame").src = path + "?adv=" + Date.now();
+        }
+
+        function reloadFrame() {
+          const f = $("advFrame");
+          f.src = f.src.replace(/([?&]adv=)\d+/, "$1" + Date.now());
         }
 
         $("advFrame").addEventListener("load", wireFrame);
@@ -340,27 +506,66 @@
         $("advSave").addEventListener("click", async () => {
           if (!current) return;
           const value = $("advValue").value;
+          const piece = current;
           $("advSave").disabled = true;
           say("Saving...", true);
           try {
-            const r = await fetch(API("/api/content"), {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: "Bearer " + token,
-              },
-              body: JSON.stringify({ updates: { [current]: value } }),
-            });
+            const r =
+              piece.kind === "cms"
+                ? await fetch(API("/api/content"), {
+                    method: "PATCH",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: "Bearer " + token,
+                    },
+                    body: JSON.stringify({ updates: { [piece.key]: value } }),
+                  })
+                : await fetch(API("/api/content/auto"), {
+                    method: "PUT",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: "Bearer " + token,
+                    },
+                    body: JSON.stringify({
+                      key: piece.key,
+                      value,
+                      label: piece.label,
+                    }),
+                  });
             const d = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(d.error || "Could not save.");
-            content[current] = value;
+            content[piece.key] = value;
             say("Saved. It is live on the site.", true);
-            const f = $("advFrame");
-            f.src = f.src.replace(/([?&]adv=)\d+/, "$1" + Date.now());
+            $("advReset").hidden = piece.kind !== "auto";
+            reloadFrame();
           } catch (e) {
             say(e.message, false);
           } finally {
             $("advSave").disabled = false;
+          }
+        });
+
+        $("advReset").addEventListener("click", async () => {
+          if (!current || current.kind !== "auto") return;
+          const piece = current;
+          $("advReset").disabled = true;
+          say("Putting it back...", true);
+          try {
+            const r = await fetch(
+              API("/api/content/auto?key=" + encodeURIComponent(piece.key)),
+              { method: "DELETE", headers: { Authorization: "Bearer " + token } },
+            );
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(d.error || "Could not reset it.");
+            delete content[piece.key];
+            $("advValue").value = piece.source;
+            $("advReset").hidden = true;
+            say("Back to the original wording.", true);
+            reloadFrame();
+          } catch (e) {
+            say(e.message, false);
+          } finally {
+            $("advReset").disabled = false;
           }
         });
 

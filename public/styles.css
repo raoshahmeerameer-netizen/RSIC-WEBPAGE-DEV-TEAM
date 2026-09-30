@@ -724,3 +724,77 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
 /* the contact email is one long unbreakable word on a narrow phone */
 .text-link,.contact-foot a,.foot-contact a span{overflow-wrap:anywhere}
 .contact-foot p{min-width:0;max-width:100%}
+
+
+/* ---- registration: a calmer form with room to breathe (2026-09-30) ---- */
+
+/* A fieldset that is hidden should stay hidden. .reg-field.active is an author
+   rule, so it was beating the browser's own [hidden] and the empty delegates
+   group showed before a headcount was set. */
+.reg-field.active[hidden]{display:none}
+
+/* The form column carries far more than it used to, so give it the room. */
+.reg{grid-template-columns:minmax(0,1.45fr) minmax(0,.8fr)}
+.reg-panel{padding:clamp(24px,3vw,40px) clamp(22px,3vw,42px) clamp(28px,3vw,44px)}
+
+/* Two fields per line. They fall back to a stack once a column would be
+   narrower than 200px, so nothing is ever squeezed. */
+.field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 20px}
+
+/* Each group is a numbered step with a hairline and real space above it. */
+.reg-panel .reg-field + .reg-field{margin-top:34px;padding-top:32px;border-top:1px solid var(--edge)}
+.reg-field legend[data-step]{display:block;width:100%;margin:0 0 2px;
+  font:600 clamp(1.1rem,1.5vw,1.25rem)/1.3 var(--serif);color:var(--text)}
+.reg-field legend[data-step]::before{content:attr(data-step);
+  display:inline-flex;align-items:center;justify-content:center;
+  width:31px;height:31px;margin-right:13px;border-radius:50%;
+  background:var(--pink);color:var(--on-pink);font:600 .95rem/1 var(--nums)}
+.reg-field legend[data-step] + .field{margin-top:18px}
+.reg-field legend[data-step] + .field-hint{margin-top:10px}
+.reg-legend + .field-hint{margin-top:0}
+
+/* Roomier fields. */
+.field{margin-top:20px}
+.field label{font-size:.9rem;margin-bottom:9px}
+.field input,.field select{padding:14px 15px;border-radius:12px}
+
+/* The delegates are part of step 4, so they continue it rather than
+   starting a step of their own. */
+.reg-panel .reg-field.reg-people{margin-top:24px;padding-top:0;border-top:0}
+.people-list{gap:16px;margin-top:18px}
+
+/* One card per delegate, with a titled strip across the top instead of a
+   number squeezed into the margin. */
+.person{position:static;padding:18px 20px 22px;gap:14px 20px;border-radius:var(--r-md)}
+.person-n{grid-column:1/-1;position:static;width:auto;text-align:left;
+  margin:0 0 4px;padding:0 0 12px;border-bottom:1px solid var(--edge);
+  font:600 .88rem/1 var(--sans);color:var(--pink)}
+.person-n::before{content:"Delegate "}
+/* the photo picker is wider than a half column deserves */
+.person .field:has(input[type=file]){grid-column:1/-1}
+
+/* The realm tally reads as a running total, not a stray line of text. */
+.realm-tally{display:inline-block;margin-top:20px;padding:11px 18px;border-radius:999px;
+  background:var(--surface-2);color:var(--text)}
+.realm-tally.is-bad{background:rgba(208,118,143,.14);color:var(--pink-light)}
+
+/* A submit worth aiming at. */
+.reg-panel button[type=submit]{margin-top:32px;padding:16px 30px;font-size:1rem}
+
+@media (max-width:900px){
+  .reg{grid-template-columns:1fr}
+}
+@media (max-width:620px){
+  .reg-panel .reg-field + .reg-field{margin-top:26px;padding-top:24px}
+  .reg-field legend[data-step]::before{width:27px;height:27px;margin-right:10px;font-size:.86rem}
+  .person{padding:16px 16px 18px}
+  .reg-panel button[type=submit]{width:100%}
+}
+
+/* The older narrow-screen rules still pinned the number into a 28px column and
+   spanned it down three rows. Now that it is a header strip, neutralise the old
+   narrow delegate row so it does not span or squeeze. */
+@media (max-width:640px){
+  .person{grid-template-columns:minmax(0,1fr);gap:12px 20px;align-items:end}
+  .person-n{grid-row:auto;align-self:auto;padding:0 0 12px}
+}
