@@ -227,7 +227,9 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .countdown-grid small{display:block;margin-top:10px;font:600 .82rem/1 var(--sans);color:var(--pink)}
 
 /* home: realm strip and eight-way map */
-.realm-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+/* Four across, because there are eleven realms, not ten: five columns left
+   Theseus' Circuit sitting alone on a row of its own. 4+4+3 fills out. */
+.realm-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .realm-strip a{display:flex;flex-direction:column;justify-content:space-between;gap:24px;min-height:140px;padding:18px;text-decoration:none}
 .realm-strip small{font:600 .8rem/1.3 var(--sans);color:var(--text-soft)}
 .realm-strip strong{font:600 1.3rem/1.1 var(--serif);transition:color .25s ease}
@@ -800,3 +802,29 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
   .person{grid-template-columns:minmax(0,1fr);gap:12px 20px;align-items:end}
   .person-n{grid-row:auto;align-self:auto;padding:0 0 12px}
 }
+
+
+/* ---- the realm strip and the italic phrases (2026-10-01) ---- */
+
+/* Two columns and an odd number of realms strands the last one, so it takes
+   the whole row instead. */
+@media (max-width:560px){
+  .realm-strip a:last-child:nth-child(odd){grid-column:1/-1}
+}
+
+/* About's opening heading lives in .about-intro rather than .page-head, so it
+   was painted with a squiggle that nothing ever revealed. */
+@media (hover:hover){
+  .about-intro:hover .page-title em{background-size:100% .2em}
+}
+.about-intro .page-title.in-view em{background-size:100% .2em;transition-delay:.3s}
+
+/* "Repeat." is the italic pink phrase of a display-sized line, the same shape
+   as a heading's, so it gets the same mark. */
+.statement span{padding-bottom:.06em;
+  background:var(--squiggle) no-repeat 0 100%/0% .2em;
+  transition:background-size .7s var(--ease)}
+@media (hover:hover){
+  .statement p:hover span{background-size:100% .2em}
+}
+.statement p.in-view span{background-size:100% .2em;transition-delay:.3s}

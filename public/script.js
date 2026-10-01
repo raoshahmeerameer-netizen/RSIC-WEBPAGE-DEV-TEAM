@@ -357,7 +357,7 @@
       );
       document
         .querySelectorAll(
-          ".page-head,.section-head,.cta-band-inner,.exp-head,.countdown-inner,.realm-cta,.glyph-panel,.site-foot .logo",
+          ".page-head,.section-head,.cta-band-inner,.exp-head,.countdown-inner,.realm-cta,.about-intro .page-title,.statement p,.glyph-panel,.site-foot .logo",
         )
         .forEach((el) => seen.observe(el));
     }
