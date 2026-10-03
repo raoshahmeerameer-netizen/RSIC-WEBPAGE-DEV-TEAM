@@ -1247,8 +1247,8 @@ if (regForm) {
       const n = parseInt(content[key], 10);
       return Number.isFinite(n) ? n : fallback;
     };
-    rules.realmsMin = num("registration.realms_min", 5);
-    rules.realmsMax = num("registration.realms_max", 8);
+    rules.realmsMin = num("registration.realms_min", 4);
+    rules.realmsMax = num("registration.realms_max", 7);
     rules.delegatesMin = num("registration.delegates_min", 5);
     rules.delegatesMax = num("registration.delegates_max", 7);
     delegates.min = rules.delegatesMin;

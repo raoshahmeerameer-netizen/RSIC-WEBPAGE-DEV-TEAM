@@ -359,8 +359,8 @@ app.post("/api/register", upload.any(), async (req, res) => {
       const n = parseInt(content[key], 10);
       return Number.isFinite(n) ? n : fallback;
     };
-    const realmsMin = num("registration.realms_min", 5);
-    const realmsMax = num("registration.realms_max", 8);
+    const realmsMin = num("registration.realms_min", 4);
+    const realmsMax = num("registration.realms_max", 7);
     const delegatesMin = num("registration.delegates_min", 5);
     const delegatesMax = num("registration.delegates_max", 7);
     const compulsory = String(content["registration.compulsory"] || "pure,business")
