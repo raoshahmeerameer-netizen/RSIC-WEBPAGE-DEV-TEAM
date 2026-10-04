@@ -345,10 +345,14 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 
 /* team org chart */
 .org{display:flex;flex-direction:column;align-items:center;padding-bottom:clamp(56px,7vw,100px)}
-.org-tier{position:relative;width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:12px;padding-top:40px}
+/* Every row hangs off a rail. The tier shrinks to its cards, because .org
+   centres its children, so the rail's 120px inset (half the 240px minimum
+   card) puts its ends on the outer cards' centres. */
+.org-tier{position:relative;max-width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:12px;padding-top:40px}
+/* the drop from whatever sits above: the Founders Council kicker for the top
+   row, the row above it for the rest */
 .org-tier::before{content:"";position:absolute;top:0;left:50%;width:1px;height:40px;background:var(--edge-strong)}
-.org-tier:first-of-type{padding-top:0}
-.org-tier:first-of-type::before{display:none}
+.org-tier::after{content:"";position:absolute;top:39px;left:120px;right:120px;height:1px;background:var(--edge-strong)}
 .org-node{padding:22px 28px 24px;min-width:240px;text-align:center}
 .org-node small{display:block;font:600 .85rem/1.3 var(--sans);color:var(--text-soft);margin-bottom:10px}
 .org-node h2{font-size:clamp(1.4rem,2vw,1.8rem);line-height:1.1}
@@ -556,6 +560,9 @@ a.tile{text-decoration:none;color:inherit}
   .row2,.pager{grid-template-columns:1fr}
   .pager .next{text-align:left}
   .org-node{min-width:0;width:100%}
+  /* one card to a row on a phone, so there is nothing for a rail to span */
+  .org-tier{width:100%}
+  .org-tier::after{display:none}
   /* bigger wheel labels for phones; the four side labels step outward so they clear their dots */
   /* 18 units rendered at 9px on a phone. The nth-of-type nudges below were
      tuned for the old ten-spoke wheel and moved the wrong labels. */
