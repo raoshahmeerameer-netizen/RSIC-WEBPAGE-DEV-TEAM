@@ -400,7 +400,7 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .t6{grid-column:1/7;grid-row:6/7;background:var(--surface-2)}
 
 /* register */
-.reg{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:clamp(24px,4vw,56px);align-items:start;padding-bottom:clamp(56px,7vw,100px)}
+.reg{padding-bottom:clamp(56px,7vw,100px)}
 .reg-panel{padding:clamp(24px,3vw,40px);border-radius:var(--r-lg)}
 .reg-switch{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:24px;padding:6px;border-radius:var(--r-sm);background:var(--bg)}
 .reg-switch button{font:600 .95rem/1.2 var(--sans);padding:12px 10px;border:0;border-radius:8px;background:transparent;color:var(--text-soft);cursor:pointer;transition:background-color .25s ease,color .25s ease,transform .25s var(--ease)}
@@ -428,7 +428,13 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .lab-node b,.realm-cta h2 b,.crumb b,.realm-card small b,.site-foot p b,.info-card p b{font-weight:inherit;font-style:inherit;color:inherit}
 a.tile{text-decoration:none;color:inherit}
 .reg-note{margin:10px 0 0;font-size:.95rem;color:var(--text-soft)}
-.reg-side{display:grid;gap:12px}
+/* The six facts and the four questions used to be stacked in a narrow side
+   column beside the form. They are their own full-width grids now, and the
+   form sits at the bottom of the page on its own. */
+.reg-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+/* four questions, so two even columns rather than an auto-fit 3 + 1 */
+.reg-faqs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.reg-facts .info-card,.reg-faqs .faq-item{margin:0}
 .info-card{padding:20px 22px;background:var(--surface-2)}
 .info-card small{display:block;font:600 .85rem/1 var(--sans);color:var(--pink);margin-bottom:10px}
 .info-card p{margin:0;font:600 1.2rem/1.35 var(--serif)}
@@ -489,7 +495,8 @@ a.tile{text-decoration:none;color:inherit}
   .disc-list:has(a:hover) li:not(:has(a:hover)),
   .gallery:has(.tile:hover) .tile:not(:hover),
   .org:has(.org-node:hover) .org-node:not(:hover),
-  .reg-side:has(.faq-item:hover) .faq-item:not(:hover){opacity:.62}
+  .reg-faqs:has(.faq-item:hover) .faq-item:not(:hover){opacity:.62}
+  .reg-facts:has(.info-card:hover) .info-card:not(:hover){opacity:.62}
 
   /* and the moving background quietens while you're reading a module */
   body:has(:is(.realm-card,.realm-strip a,.map a,.principles>div,.disc-list a,.org-node,.exp-list li,.tile,.lab-node,.faq-item,.info-card,.pager a,.countdown-grid>div):hover) :is(.particles,.ambient){opacity:.4}
@@ -560,6 +567,7 @@ a.tile{text-decoration:none;color:inherit}
   .row2,.pager{grid-template-columns:1fr}
   .pager .next{text-align:left}
   .org-node{min-width:0;width:100%}
+  .reg-faqs{grid-template-columns:minmax(0,1fr)}
   /* one card to a row on a phone, so there is nothing for a rail to span */
   .org-tier{width:100%}
   .org-tier::after{display:none}
@@ -734,7 +742,7 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
 
 /* the contact email is one long unbreakable word on a narrow phone */
 .text-link,.contact-foot a,.foot-contact a span{overflow-wrap:anywhere}
-.contact-foot p{min-width:0;max-width:100%}
+.contact-foot p{min-width:0;max-width:100%;flex:1 1 clamp(240px,100%,340px)}
 
 
 /* ---- registration: a calmer form with room to breathe (2026-09-30) ---- */
@@ -744,9 +752,9 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
    group showed before a headcount was set. */
 .reg-field.active[hidden]{display:none}
 
-/* The form column carries far more than it used to, so give it the room. */
-.reg{grid-template-columns:minmax(0,1.45fr) minmax(0,.8fr)}
-.reg-panel{padding:clamp(24px,3vw,40px) clamp(22px,3vw,42px) clamp(28px,3vw,44px)}
+/* The form has the page to itself now, so hold it to a readable width
+   rather than letting inputs stretch the full 1150px. */
+.reg-panel{max-width:980px;margin-inline:auto;padding:clamp(24px,3vw,40px) clamp(22px,3vw,42px) clamp(28px,3vw,44px)}
 
 /* Two fields per line. They fall back to a stack once a column would be
    narrower than 200px, so nothing is ever squeezed. */
@@ -835,3 +843,27 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
   .statement p:hover span{background-size:100% .2em}
 }
 .statement p.in-view span{background-size:100% .2em;transition-delay:.3s}
+
+
+/* ---- the Copy button beside an email address (2026-10-05) ---- */
+.copy-mail{
+  margin-left:10px;vertical-align:baseline;
+  font:600 .78rem/1 var(--sans);color:var(--pink);
+  background:transparent;border:1px solid var(--edge-strong);border-radius:999px;
+  padding:7px 12px;min-height:32px;cursor:pointer;
+  transition:background-color .25s ease,color .25s ease,border-color .25s ease,transform .25s var(--ease);
+}
+.copy-mail.is-done{color:var(--on-pink);background:var(--pink);border-color:var(--pink)}
+/* In the narrow facts card the button on the same line pushed the address
+   into a mid-word break, so it sits under it there and keeps the full width. */
+.info-card .copy-mail{display:block;margin:12px 0 0}
+/* The card's own type is 19px, at which the address is wider than the card
+   and broke mid-word. It sits on one line at this size. */
+.info-card a[href^="mailto:"]{font-size:.95rem}
+@media (hover:hover){
+  .copy-mail:hover{color:var(--on-pink);background:var(--pink);border-color:var(--pink)}
+}
+@media (hover:none){
+  .copy-mail{min-height:40px;padding:10px 14px}
+  .copy-mail:active{transform:scale(.95)}
+}

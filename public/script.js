@@ -373,7 +373,8 @@
       ".org-node",
       ".timeline li",
       ".gallery .tile",
-      ".reg-side>div",
+      ".reg-facts>div",
+      ".reg-faqs>div",
       ".pager a",
     ]
       .map((sel) => [...document.querySelectorAll(sel)])
@@ -1380,3 +1381,58 @@ if (regForm) {
     }
   });
 }
+
+// A mailto: link only opens something if the visitor's browser has a mail
+// handler registered. Plenty do not, and then clicking the address looks
+// broken. The link still works for everyone who has one; this adds a Copy
+// button beside it so the click always does something. The footer is left
+// alone, because its address sits in a tight row of icons.
+(() => {
+  const mails = [
+    ...document.querySelectorAll('a[href^="mailto:"]'),
+  ].filter((a) => !a.closest(".site-foot"));
+  if (!mails.length) return;
+
+  const copy = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (e) {
+      // clipboard blocked (old browser, or permission denied): select it
+      // instead so the visitor can copy by hand
+      try {
+        const r = document.createRange();
+        r.selectNodeContents(mails[0]);
+        const sel = getComputedStyle ? window.getSelection() : null;
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(r);
+        }
+      } catch (e2) {}
+      return false;
+    }
+  };
+
+  mails.forEach((a) => {
+    const address = a.getAttribute("href").replace(/^mailto:/i, "").trim();
+    if (!address) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "copy-mail";
+    btn.textContent = "Copy";
+    btn.setAttribute("aria-label", "Copy " + address);
+    let resetAt = 0;
+    btn.addEventListener("click", async () => {
+      const ok = await copy(address);
+      btn.textContent = ok ? "Copied" : "Select and copy";
+      btn.classList.add("is-done");
+      const mine = ++resetAt;
+      setTimeout(() => {
+        if (mine !== resetAt) return;
+        btn.textContent = "Copy";
+        btn.classList.remove("is-done");
+      }, 2000);
+    });
+    a.insertAdjacentElement("afterend", btn);
+  });
+})();
