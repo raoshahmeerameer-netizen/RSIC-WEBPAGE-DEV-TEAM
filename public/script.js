@@ -1388,29 +1388,56 @@ if (regForm) {
 // button beside it so the click always does something. The footer is left
 // alone, because its address sits in a tight row of icons.
 (() => {
-  const mails = [
-    ...document.querySelectorAll('a[href^="mailto:"]'),
-  ].filter((a) => !a.closest(".site-foot"));
+  const mails = [...document.querySelectorAll('a[href^="mailto:"]')].filter(
+    (a) => !a.closest(".site-foot"),
+  );
   if (!mails.length) return;
+
+  // Selecting the address is the last resort: the visitor can then copy it
+  // by hand. It selects the one that was clicked, not whichever came first.
+  const selectText = (el) => {
+    try {
+      const sel = window.getSelection();
+      if (!sel) return false;
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      sel.removeAllRanges();
+      sel.addRange(r);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  // execCommand is deprecated but still works where the async clipboard is
+  // refused, which is the case in more browsers than you would expect.
+  const copyByCommand = (text) => {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:0;left:-9999px;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  };
 
   const copy = async (text) => {
     try {
-      await navigator.clipboard.writeText(text);
-      return true;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
     } catch (e) {
-      // clipboard blocked (old browser, or permission denied): select it
-      // instead so the visitor can copy by hand
-      try {
-        const r = document.createRange();
-        r.selectNodeContents(mails[0]);
-        const sel = getComputedStyle ? window.getSelection() : null;
-        if (sel) {
-          sel.removeAllRanges();
-          sel.addRange(r);
-        }
-      } catch (e2) {}
-      return false;
+      // fall through to execCommand
     }
+    return copyByCommand(text);
   };
 
   mails.forEach((a) => {
@@ -1421,14 +1448,15 @@ if (regForm) {
     btn.className = "copy-mail";
     btn.textContent = "Copy";
     btn.setAttribute("aria-label", "Copy " + address);
-    let resetAt = 0;
+    let run = 0;
     btn.addEventListener("click", async () => {
       const ok = await copy(address);
+      if (!ok) selectText(a);
       btn.textContent = ok ? "Copied" : "Select and copy";
-      btn.classList.add("is-done");
-      const mine = ++resetAt;
+      btn.classList.toggle("is-done", ok);
+      const mine = ++run;
       setTimeout(() => {
-        if (mine !== resetAt) return;
+        if (mine !== run) return;
         btn.textContent = "Copy";
         btn.classList.remove("is-done");
       }, 2000);
