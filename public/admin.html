@@ -1387,8 +1387,10 @@
 
         // ---------------------------------------------------------- CSV
         // One row per delegation, with every delegate spread into their own
-        // columns so the sheet is usable. The old export still wrote age and
-        // class, which no longer exist, and left out everything added since.
+        // columns so the sheet is usable. Text only: no photo paths, because
+        // the pictures belong in the PDF and a storage path is no use in a
+        // spreadsheet. Phone numbers and CNICs go out as text formulas so
+        // Excel cannot eat a leading zero or read a CNIC as a date.
         // ---------------------------------------------------------- PDF export
         // A printable record of every delegation: the school, the supervisor,
         // the realms and a row per delegate with their photo. The libraries are
@@ -1935,15 +1937,15 @@
             "Supervisor",
             "Supervisor number",
             "Supervisor email",
-            "Delegates",
-            "Realms chosen",
+            "Delegate count",
+            "Realm count",
             "Realms",
+            "Photos on file",
             "Head delegate",
             "Head delegate email",
             "Head delegate number",
             "Head delegate CNIC",
             "Head delegate parent CNIC",
-            "Head delegate photo",
           ];
           for (let i = 1; i <= others; i++)
             head.push(
@@ -1952,15 +1954,35 @@
               "Delegate " + (i + 1) + " number",
               "Delegate " + (i + 1) + " CNIC",
               "Delegate " + (i + 1) + " parent CNIC",
-              "Delegate " + (i + 1) + " photo",
             );
+
+          // Sorts correctly as text in any spreadsheet, unlike a locale string.
+          const stamp = (v) => {
+            if (!v) return "";
+            const d = new Date(v);
+            if (isNaN(d)) return "";
+            const pad = (n) => String(n).padStart(2, "0");
+            return (
+              d.getFullYear() +
+              "-" + pad(d.getMonth() + 1) +
+              "-" + pad(d.getDate()) +
+              " " + pad(d.getHours()) +
+              ":" + pad(d.getMinutes())
+            );
+          };
 
           const line = (r) => {
             const h = r.head_delegate || {};
             const keys = realmsOf(r);
+            const list = Array.isArray(r.delegate_list) ? r.delegate_list : [];
+            // the pictures themselves belong in the PDF; the sheet only says
+            // whether each person has one
+            const withPhoto =
+              (h.photo ? 1 : 0) + list.filter((d) => d && d.photo).length;
+            const expected = Number(r.delegates) || list.length + 1;
             const out = [
               "#" + r.id,
-              r.created_at ? new Date(r.created_at).toLocaleString() : "",
+              stamp(r.created_at),
               r.status || "Pending",
               r.school,
               r.school_email,
@@ -1971,27 +1993,34 @@
               r.delegates,
               keys.length,
               keys.map(realmName).join(" | "),
+              withPhoto + " of " + expected,
               h.name,
               h.email,
               h.phone,
               h.cnic,
               h.parentCnic,
-              h.photo,
             ];
-            const list = Array.isArray(r.delegate_list) ? r.delegate_list : [];
             for (let i = 0; i < others; i++) {
               const d = list[i] || {};
-              out.push(d.name, d.email, d.phone, d.cnic, d.parentCnic, d.photo);
+              out.push(d.name, d.email, d.phone, d.cnic, d.parentCnic);
             }
             return out;
           };
 
-          // a leading ' keeps Excel from turning a CNIC or a phone number
-          // into a number and losing the leading zero
+          // Excel and Google Sheets read 03001234567 as a number and drop the
+          // leading zero, and they turn 35201-1234567-1 into a date or a sum.
+          // Writing those as a text formula is the one form all three of
+          // Excel, Sheets and LibreOffice read back as the exact string.
           const esc = (v) => {
-            let t = v == null ? "" : String(v);
-            if (/^[0-9+][0-9+\- ]{6,}$/.test(t)) t = "'" + t;
-            return '"' + t.replace(/"/g, '""') + '"';
+            const t = v == null ? "" : String(v);
+            const q = t.replace(/"/g, '""');
+            if (/^[0-9+][0-9+\-\s]{6,}$/.test(t)) return '"=""' + q + '"""';
+            // A school or delegate name is whatever somebody typed into the
+            // public form. Excel runs a cell that opens with = + - or @, so
+            // those are pushed behind an apostrophe and stay plain text.
+            if (/^[=+\-@\t\r]/.test(t))
+              return '"\'' + q + '"';
+            return '"' + q + '"';
           };
 
           const csv = [head, ...rows.map(line)]
@@ -2010,10 +2039,10 @@
           URL.revokeObjectURL(url);
           say(
             $("tableMsg"),
-            "Exported " + rows.length + " delegation" + (rows.length > 1 ? "s" : "") + ".",
+            "Exported " + rows.length + " delegation" + (rows.length > 1 ? "s" : "") + ", text only.",
             true,
           );
-        });
+                });
 
         // ---------------------------------------------------------- the switch
         const valueOf = (key) => {
