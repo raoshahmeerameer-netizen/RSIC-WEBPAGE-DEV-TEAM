@@ -168,8 +168,10 @@
   // realm pages link here with ?realm=key, which ticks that realm
   const wantedRealm = new URLSearchParams(location.search).get("realm");
   if (wantedRealm) {
+    // a realm page may link to a core realm as well as an optional one
     const box = document.querySelector(
-      `#registrationForm input[name="realms"][value="${CSS.escape(wantedRealm)}"]`,
+      `#registrationForm input[name="realms"][value="${CSS.escape(wantedRealm)}"],` +
+        `#registrationForm input[name="coreRealm"][value="${CSS.escape(wantedRealm)}"]`,
     );
     if (box && !box.disabled) {
       box.checked = true;
@@ -1075,17 +1077,18 @@ const rsicContentReady = (async () => {
 })();
 
 // ---------------------------------------------------------------- registration
-// One route only: a school registers a delegation. Two realms are compulsory
-// and the delegation picks the rest, within the limits the admin sets.
+// One route only: a school registers a delegation. It takes exactly one core
+// realm, either Project Nexus or Gaia's Exchange, which are alternatives, and
+// then picks the rest from the others, within the limits the admin sets.
 const regForm = document.getElementById("registrationForm");
 const regStatus = document.getElementById("regStatus");
 const regNote = document.getElementById("regNote");
 
 if (regForm) {
   const submitBtn = regForm.querySelector('button[type="submit"]');
-  const boxes = [...regForm.querySelectorAll('input[name="realms"]')];
-  const optional = boxes.filter((b) => b.dataset.locked !== "yes");
-  const locked = boxes.filter((b) => b.dataset.locked === "yes");
+  const optional = [...regForm.querySelectorAll('input[name="realms"]')];
+  const core = [...regForm.querySelectorAll('input[name="coreRealm"]')];
+  const extrasHead = document.getElementById("extrasHead");
   const tally = document.getElementById("realmTally");
   const delegates = document.getElementById("s-delegates");
   const delegatesHint = document.getElementById("delegatesHint");
@@ -1093,18 +1096,22 @@ if (regForm) {
   const peopleList = document.getElementById("peopleList");
 
   const rules = {
-    realmsMin: 5,
-    realmsMax: 8,
+    realmsMin: 4,
+    realmsMax: 6,
     delegatesMin: 5,
     delegatesMax: 7,
   };
   let isOpen = false;
 
+  const corePicked = () => core.find((b) => b.checked) || null;
+
   const chosen = () =>
-    locked.length + optional.filter((b) => b.checked).length;
+    (corePicked() ? 1 : 0) + optional.filter((b) => b.checked).length;
 
   const realmsOk = () =>
-    chosen() >= rules.realmsMin && chosen() <= rules.realmsMax;
+    !!corePicked() &&
+    chosen() >= rules.realmsMin &&
+    chosen() <= rules.realmsMax;
 
   const delegatesOk = () => {
     const n = parseInt(delegates.value, 10);
@@ -1115,20 +1122,23 @@ if (regForm) {
 
   const paintTally = () => {
     const n = chosen();
-    tally.textContent =
-      n + " of " + rules.realmsMax + " realms chosen" +
-      (n < rules.realmsMin
-        ? ". Choose at least " + rules.realmsMin + "."
-        : n > rules.realmsMax
-          ? ". That is too many."
+    const haveCore = !!corePicked();
+    tally.textContent = !haveCore
+      ? "Choose your core realm to start."
+      : n + " of " + rules.realmsMax + " realms chosen" +
+        (n < rules.realmsMin
+          ? ". Choose " + (rules.realmsMin - n) + " more."
           : ".");
     tally.classList.toggle("is-bad", !realmsOk());
     // stop people going over the limit rather than telling them off afterwards
     optional.forEach((b) => {
-      b.disabled = !b.checked && n >= rules.realmsMax;
+      b.disabled = !b.checked && (!haveCore || n >= rules.realmsMax);
       b.closest(".realm-pick").classList.toggle("is-full", b.disabled);
       b.closest(".realm-pick").classList.toggle("is-on", b.checked);
     });
+    core.forEach((b) =>
+      b.closest(".realm-pick").classList.toggle("is-on", b.checked),
+    );
     if (submitBtn && isOpen) submitBtn.disabled = !canSubmit();
   };
 
@@ -1138,6 +1148,7 @@ if (regForm) {
   };
 
   optional.forEach((b) => b.addEventListener("change", paintTally));
+  core.forEach((b) => b.addEventListener("change", paintTally));
   // One row of name, email, number and photo per delegate. Rows are rebuilt when the
   // headcount changes, and anything already typed is carried over.
   // a rebuilt row cannot keep a chosen file, so the files are held here by index
@@ -1249,13 +1260,17 @@ if (regForm) {
       return Number.isFinite(n) ? n : fallback;
     };
     rules.realmsMin = num("registration.realms_min", 4);
-    rules.realmsMax = num("registration.realms_max", 7);
+    rules.realmsMax = num("registration.realms_max", 6);
     rules.delegatesMin = num("registration.delegates_min", 5);
     rules.delegatesMax = num("registration.delegates_max", 7);
     delegates.min = rules.delegatesMin;
     delegates.max = rules.delegatesMax;
     delegatesHint.textContent =
       rules.delegatesMin + " to " + rules.delegatesMax + " delegates.";
+    if (extrasHead)
+      extrasHead.textContent =
+        "Then choose " + (rules.realmsMin - 1) +
+        " to " + (rules.realmsMax - 1) + " more";
     paintTally();
   };
 
@@ -1308,9 +1323,12 @@ if (regForm) {
       problems.push(
         "between " + rules.delegatesMin + " and " + rules.delegatesMax + " delegates",
       );
-    if (!realmsOk())
+    if (!corePicked())
+      problems.push("one core realm, either Project Nexus or Gaia's Exchange");
+    else if (!realmsOk())
       problems.push(
-        "between " + rules.realmsMin + " and " + rules.realmsMax + " realms",
+        "between " + (rules.realmsMin - 1) + " and " + (rules.realmsMax - 1) +
+          " more realms on top of your core realm",
       );
     if (delegatesOk() && !peopleOk())
       problems.push(
@@ -1343,7 +1361,10 @@ if (regForm) {
         parentCnic: value("s-head-parent-cnic"),
       },
       delegates: value("s-delegates"),
-      realms: boxes.filter((b) => b.checked).map((b) => b.value),
+      realms: [
+        ...(corePicked() ? [corePicked().value] : []),
+        ...optional.filter((b) => b.checked).map((b) => b.value),
+      ],
       people: peopleValues(),
     };
 

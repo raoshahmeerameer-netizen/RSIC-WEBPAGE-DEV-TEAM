@@ -604,16 +604,17 @@ a.tile{text-decoration:none;color:inherit}
 .realm-pick b{font:600 .95rem/1.3 var(--sans);color:var(--text)}
 .realm-pick small{font:500 .8rem/1.3 var(--sans);color:var(--text-soft)}
 .realm-pick.is-on{border-color:var(--pink);background:rgba(208,118,143,.1)}
-/* compulsory realms are shown ticked and cannot be unticked */
-.realm-pick.is-locked{cursor:default;opacity:.95}
-.realm-pick.is-locked b::after{content:"Compulsory";display:inline-block;margin-left:8px;padding:2px 8px;
+/* the two core realms are alternatives: one is required, and taking one rules
+   the other out, so they are radios rather than tickboxes */
+.realm-pick.is-core b::after{content:"Core";display:inline-block;margin-left:8px;padding:2px 8px;
   border-radius:999px;font:600 .68rem/1.5 var(--sans);color:var(--pink);border:1px solid var(--pink)}
+.realm-pick.is-core input{border-radius:50%}
 /* once the maximum is reached the rest stop responding, rather than erroring later */
 .realm-pick.is-full{opacity:.45;cursor:not-allowed}
 .realm-tally{margin:16px 0 0;font:600 .9rem/1.4 var(--sans);color:var(--text-soft)}
 .realm-tally.is-bad{color:var(--pink-light)}
 .reg-realms{margin-top:26px;padding-top:24px;border-top:1px solid var(--edge)}
-@media (hover:hover){.realm-pick:not(.is-locked):not(.is-full):hover{border-color:rgba(243,238,232,.28)}}
+@media (hover:hover){.realm-pick:not(.is-full):hover{border-color:rgba(243,238,232,.28)}}
 @media (max-width:560px){.realm-picker{grid-template-columns:1fr}}
 
 /* ---------- registration: one row per delegate ---------- */

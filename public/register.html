@@ -6,14 +6,14 @@
     <title>Register | RSIC 2026</title>
     <meta
       name="description"
-      content="Register your school's delegation for RSIC: 5 to 7 delegates across 4 to 7 realms. Registration opens soon."
+      content="Register your school's delegation for RSIC: 5 to 7 delegates across 4 to 6 realms. Registration opens soon."
     />
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
 <link rel="apple-touch-icon" href="/assets/icon-180.png">
 <meta name="theme-color" content="#040b1a">
 <meta property="og:title" content="Register | RSIC 2026">
-<meta property="og:description" content="Register your school's delegation for RSIC: 5 to 7 delegates across 4 to 7 realms. Registration opens soon.">
+<meta property="og:description" content="Register your school's delegation for RSIC: 5 to 7 delegates across 4 to 6 realms. Registration opens soon.">
 <meta property="og:image" content="https://cityrsic.com/assets/share-card.jpg">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
@@ -63,7 +63,7 @@
       </section>
 
 <section class="wrap section tight-top reg" aria-label="Registration form">
-<p class="reg-intro">A school registers one delegation: 5 to 7 delegates across 4 to 7 realms.</p>
+<p class="reg-intro">A school registers one delegation: 5 to 7 delegates across 4 to 6 realms.</p>
 <div class="reg-panel">
           <form id="registrationForm" novalidate>
             <input type="hidden" name="route" value="school" />
@@ -157,21 +157,21 @@
 
             <fieldset class="reg-field active reg-realms">
               <legend class="reg-legend" data-step="5">Realms</legend>
-              <p class="field-hint" id="realmsNote" data-cms="registration.realms_note">Project Nexus and Gaia's Exchange are compulsory for every delegation. Pick the rest yourself.</p>
+              <p class="field-hint" id="realmsNote" data-cms="registration.realms_note">Every delegation takes one core realm, either Project Nexus or Gaia's Exchange, and then picks 3 to 5 more from the rest.</p>
 
-              <p class="realm-pick-head">Compulsory</p>
-              <div class="realm-picker">
-                <label class="realm-pick is-locked">
-                  <input type="checkbox" name="realms" value="pure" checked disabled data-locked="yes" />
+              <p class="realm-pick-head">Your core realm, choose one</p>
+              <div class="realm-picker" role="radiogroup" aria-label="Core realm">
+                <label class="realm-pick is-core">
+                  <input type="radio" name="coreRealm" value="pure" data-core="yes" required />
                   <span><b data-cms="realm.pure.name">Project Nexus</b><small>Pure Sciences</small></span>
                 </label>
-                <label class="realm-pick is-locked">
-                  <input type="checkbox" name="realms" value="business" checked disabled data-locked="yes" />
+                <label class="realm-pick is-core">
+                  <input type="radio" name="coreRealm" value="business" data-core="yes" required />
                   <span><b data-cms="realm.business.name">Gaia's Exchange</b><small>Environmental Business</small></span>
                 </label>
               </div>
 
-              <p class="realm-pick-head">Choose the rest</p>
+              <p class="realm-pick-head" id="extrasHead">Then choose 3 to 5 more</p>
               <div class="realm-picker">
                 <label class="realm-pick">
                   <input type="checkbox" name="realms" value="math" />
@@ -305,8 +305,8 @@
           <div class="faq-item">
             <h2>How many realms do we enter?</h2>
             <p>
-              Each delegation has to choose 2 to 5 additional realms, on top of
-              the two compulsory ones. Pick them from the other
+              Four to six. One core realm, either Project Nexus or Gaia's
+              Exchange, and then 3 to 5 more from the other
               <a class="text-link" href="/realms">nine realms</a>.
             </p>
           </div>
