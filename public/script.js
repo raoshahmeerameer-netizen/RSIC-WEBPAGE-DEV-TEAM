@@ -1021,6 +1021,26 @@ const rsicContentReady = (async () => {
       const v = content[el.dataset.cms];
       if (v != null && v !== "") rsicSetText(el, v);
     });
+    // A long block written as paragraphs separated by a blank line. The plain
+    // data-cms fill writes textContent, which would run them into one wall of
+    // words, so this one rebuilds the paragraphs. rsicSetText still escapes
+    // every piece, so the editor cannot inject HTML here either.
+    document.querySelectorAll("[data-cms-rich]").forEach((el) => {
+      const v = content[el.dataset.cmsRich];
+      if (v == null || v === "") return;
+      const parts = String(v)
+        .split(/\n\s*\n/)
+        .map((t) => t.trim())
+        .filter(Boolean);
+      if (!parts.length) return;
+      el.textContent = "";
+      parts.forEach((text) => {
+        const para = document.createElement("p");
+        rsicSetText(para, text);
+        el.appendChild(para);
+      });
+    });
+
     // links that only exist once a file has been uploaded, e.g. study guides
     document.querySelectorAll("[data-cms-href]").forEach((el) => {
       const v = rsicSafeUrl(content[el.dataset.cmsHref] || "");

@@ -881,3 +881,21 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
   .copy-mail{min-height:40px;padding:10px 14px}
   .copy-mail:active{transform:scale(.95)}
 }
+
+
+/* ---- the Executive Council's letter on the team page (2026-10-10) ---- */
+/* A single raised panel, held to a readable measure, with the sign-off in
+   the same pink italic the rest of the site uses for a human voice. */
+.letter{padding-bottom:clamp(56px,7vw,100px)}
+.letter-panel{max-width:860px;margin-inline:auto;padding:clamp(28px,4vw,56px) clamp(24px,4vw,60px) clamp(32px,4vw,60px);
+  background:var(--surface);border-radius:var(--r-lg);position:relative;overflow:hidden}
+.letter-title{margin:6px 0 clamp(20px,2.5vw,30px);font-size:clamp(1.9rem,3.4vw,2.9rem);line-height:1.08}
+.letter-body p{margin:0 0 1.05em;color:var(--text-soft);font-size:clamp(1rem,1.15vw,1.08rem);line-height:1.75}
+.letter-body p:last-child{margin-bottom:0}
+/* the opening line carries the weight, like the first line of a letter */
+.letter-body p:first-child{color:var(--text);font:500 clamp(1.15rem,1.7vw,1.4rem)/1.5 var(--serif)}
+.letter-signoff{margin:clamp(24px,3vw,34px) 0 2px;color:var(--text-soft)}
+.letter-signature{margin:0;font:italic 600 clamp(1.2rem,2vw,1.6rem)/1.3 var(--serif);color:var(--pink)}
+@media (max-width:560px){
+  .letter-panel{padding:24px 20px 28px}
+}
