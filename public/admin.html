@@ -1920,13 +1920,11 @@
           if (!rows.length)
             return say($("tableMsg"), "Nothing to export yet.", false);
 
-          const others = Math.max(
-            0,
-            ...rows.map((r) =>
-              Array.isArray(r.delegate_list) ? r.delegate_list.length : 0,
-            ),
-          );
-
+          // One row per PERSON, not per delegation. The old sheet put every
+          // delegate in their own columns, which ran to 48 of them and meant
+          // scrolling sideways to read one school. A person per row fits on a
+          // screen, sorts and filters the way a spreadsheet is meant to, and
+          // still gives one row per delegation if you filter Role to the head.
           const head = [
             "Reference",
             "Registered",
@@ -1937,24 +1935,17 @@
             "Supervisor",
             "Supervisor number",
             "Supervisor email",
-            "Delegate count",
+            "Delegates",
             "Realm count",
             "Realms",
-            "Photos on file",
-            "Head delegate",
-            "Head delegate email",
-            "Head delegate number",
-            "Head delegate CNIC",
-            "Head delegate parent CNIC",
+            "Role",
+            "Name",
+            "Email",
+            "Number",
+            "Student CNIC",
+            "Parent CNIC",
+            "Photo on file",
           ];
-          for (let i = 1; i <= others; i++)
-            head.push(
-              "Delegate " + (i + 1) + " name",
-              "Delegate " + (i + 1) + " email",
-              "Delegate " + (i + 1) + " number",
-              "Delegate " + (i + 1) + " CNIC",
-              "Delegate " + (i + 1) + " parent CNIC",
-            );
 
           // Sorts correctly as text in any spreadsheet, unlike a locale string.
           const stamp = (v) => {
@@ -1971,16 +1962,13 @@
             );
           };
 
-          const line = (r) => {
-            const h = r.head_delegate || {};
+          const lines = [];
+          rows.forEach((r) => {
             const keys = realmsOf(r);
             const list = Array.isArray(r.delegate_list) ? r.delegate_list : [];
-            // the pictures themselves belong in the PDF; the sheet only says
-            // whether each person has one
-            const withPhoto =
-              (h.photo ? 1 : 0) + list.filter((d) => d && d.photo).length;
-            const expected = Number(r.delegates) || list.length + 1;
-            const out = [
+            // the delegation's own details, repeated on each of its people so
+            // every row stands on its own when the sheet is sorted or filtered
+            const delegation = [
               "#" + r.id,
               stamp(r.created_at),
               r.status || "Pending",
@@ -1993,19 +1981,22 @@
               r.delegates,
               keys.length,
               keys.map(realmName).join(" | "),
-              withPhoto + " of " + expected,
-              h.name,
-              h.email,
-              h.phone,
-              h.cnic,
-              h.parentCnic,
             ];
-            for (let i = 0; i < others; i++) {
-              const d = list[i] || {};
-              out.push(d.name, d.email, d.phone, d.cnic, d.parentCnic);
-            }
-            return out;
-          };
+            const person = (role, p) => [
+              ...delegation,
+              role,
+              p.name,
+              p.email,
+              p.phone,
+              p.cnic,
+              p.parentCnic,
+              p.photo ? "Yes" : "No",
+            ];
+            lines.push(person("Head delegate", r.head_delegate || {}));
+            list.forEach((d, i) =>
+              lines.push(person("Delegate " + (i + 2), d || {})),
+            );
+          });
 
           // Excel and Google Sheets read 03001234567 as a number and drop the
           // leading zero, and they turn 35201-1234567-1 into a date or a sum.
@@ -2014,20 +2005,22 @@
           const esc = (v) => {
             const t = v == null ? "" : String(v);
             const q = t.replace(/"/g, '""');
+            // Only strings this code recognises as a number get the formula
+            // form, so nothing a registrant typed can become one.
             if (/^[0-9+][0-9+\-\s]{6,}$/.test(t)) return '"=""' + q + '"""';
             // A school or delegate name is whatever somebody typed into the
             // public form. Excel runs a cell that opens with = + - or @, so
             // those are pushed behind an apostrophe and stay plain text.
             if (/^[=+\-@\t\r]/.test(t))
-              return '"\'' + q + '"';
+              return '"' + "'" + q + '"';
             return '"' + q + '"';
           };
 
-          const csv = [head, ...rows.map(line)]
+          const csv = [head, ...lines]
             .map((r) => r.map(esc).join(","))
             .join("\r\n");
           const url = URL.createObjectURL(
-            new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }),
+            new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }),
           );
           const a = document.createElement("a");
           a.href = url;
@@ -2039,10 +2032,11 @@
           URL.revokeObjectURL(url);
           say(
             $("tableMsg"),
-            "Exported " + rows.length + " delegation" + (rows.length > 1 ? "s" : "") + ", text only.",
+            "Exported " + lines.length + " people from " + rows.length +
+              " delegation" + (rows.length > 1 ? "s" : "") + ", text only.",
             true,
           );
-                });
+        });
 
         // ---------------------------------------------------------- the switch
         const valueOf = (key) => {
