@@ -7,7 +7,8 @@
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
-    "dev": "node backend/server.js"
+    "dev": "node backend/server.js",
+    "prestart": "node tools/stamp-assets.js"
   },
   "engines": {
     "node": ">=18"
