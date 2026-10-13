@@ -1451,18 +1451,15 @@ if (regForm) {
 }
 
 // A mailto: link only opens something if the visitor's browser has a mail
-// handler registered. Plenty do not, and then clicking the address looks
-// broken. The link still works for everyone who has one; this adds a Copy
-// button beside it so the click always does something. The footer is left
-// alone, because its address sits in a tight row of icons.
+// handler registered. Plenty do not, and then clicking the address does
+// nothing at all and looks broken, which is exactly what the owner kept
+// hitting in the footer. The link is left alone for anyone who has a handler,
+// and every address additionally copies itself on click and says so, so the
+// click always does something. Outside the footer there is a Copy button too.
 (() => {
-  const mails = [...document.querySelectorAll('a[href^="mailto:"]')].filter(
-    (a) => !a.closest(".site-foot"),
-  );
+  const mails = [...document.querySelectorAll('a[href^="mailto:"]')];
   if (!mails.length) return;
 
-  // Selecting the address is the last resort: the visitor can then copy it
-  // by hand. It selects the one that was clicked, not whichever came first.
   const selectText = (el) => {
     try {
       const sel = window.getSelection();
@@ -1508,9 +1505,39 @@ if (regForm) {
     return copyByCommand(text);
   };
 
+  // a short word in place of the address, then back again
+  const flash = (el, word) => {
+    if (el.dataset.flashing) return;
+    const was = el.textContent;
+    el.dataset.flashing = "yes";
+    el.textContent = word;
+    el.classList.add("mail-copied");
+    setTimeout(() => {
+      el.textContent = was;
+      el.classList.remove("mail-copied");
+      delete el.dataset.flashing;
+    }, 1600);
+  };
+
   mails.forEach((a) => {
     const address = a.getAttribute("href").replace(/^mailto:/i, "").trim();
     if (!address) return;
+
+    // the element holding the words, so the flash does not wipe an icon
+    const label =
+      [...a.children].find((c) => c.textContent.trim() === address) || a;
+
+    // The default is deliberately not prevented: a visitor who does have a
+    // mail client still gets it, and everyone else still gets the address.
+    a.addEventListener("click", async () => {
+      const ok = await copy(address);
+      if (ok) flash(label, "Copied");
+      else selectText(label);
+    });
+
+    // The footer address sits in a tight row of icons, so it gets the click
+    // behaviour only. Elsewhere there is room for a button as well.
+    if (a.closest(".site-foot")) return;
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "copy-mail";
@@ -1519,7 +1546,7 @@ if (regForm) {
     let run = 0;
     btn.addEventListener("click", async () => {
       const ok = await copy(address);
-      if (!ok) selectText(a);
+      if (!ok) selectText(label);
       btn.textContent = ok ? "Copied" : "Select and copy";
       btn.classList.toggle("is-done", ok);
       const mine = ++run;

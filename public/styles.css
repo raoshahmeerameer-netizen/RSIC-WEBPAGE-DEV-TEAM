@@ -920,3 +920,7 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
 @media (max-width:560px){
   .letter-panel{padding:24px 20px 28px}
 }
+
+
+/* the brief "Copied" that replaces an email address when you click it */
+.mail-copied{color:var(--pink-light)}

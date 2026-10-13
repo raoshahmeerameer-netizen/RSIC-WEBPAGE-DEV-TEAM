@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=b106f30a22" />
+    <link rel="stylesheet" href="/styles.css?v=1a69a43df8" />
 
     <style>
       .admin-wrap {
@@ -277,6 +277,12 @@
         font: 600 0.84rem/1.3 var(--sans);
         color: var(--text-soft);
         margin-bottom: 6px;
+      }
+      .row-no {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        color: var(--pink);
+        white-space: nowrap;
       }
       .cms-field textarea {
         min-height: 92px;
@@ -534,13 +540,14 @@
               Export PDF
             </button>
             <button class="action-btn ghost" type="button" id="csvBtn">
-              Export CSV
+              Export Excel
             </button>
           </div>
           <div class="table-container">
             <table class="admin-table">
               <thead>
                 <tr>
+                  <th scope="col">No.</th>
                   <th scope="col">School</th>
                   <th scope="col">Realms</th>
                   <th scope="col">Status</th>
@@ -549,7 +556,7 @@
               </thead>
               <tbody id="tableBody">
                 <tr>
-                  <td colspan="4">Loading…</td>
+                  <td colspan="5">Loading…</td>
                 </tr>
               </tbody>
             </table>
@@ -695,7 +702,7 @@
       </form>
     </div>
 
-    <script src="/script.js?v=83d24fb293" defer></script>
+    <script src="/script.js?v=bf9d2e653c" defer></script>
     <script>
       (() => {
         // ---------------------------------------------------------- setup
@@ -861,18 +868,30 @@
         };
         const realmName = (key) => REALM_LABELS[key] || key || "Unassigned";
 
+        // The number the organisers read out, kept separate from the table's
+        // internal id so it can be reset without touching the primary key.
+        // Older rows saved before the column existed fall back to their id.
+        const refNo = (r) =>
+          r && r.reg_no != null
+            ? String(r.reg_no).padStart(3, "0")
+            : "#" + (r && r.id);
+
         // Everything below builds nodes and sets textContent, never innerHTML,
         // so a name containing HTML is shown as text instead of being run.
         function renderTable(list) {
           const body = $("tableBody");
           if (!list.length)
-            return body.replaceChildren(cell("No registrations yet.", 4));
+            return body.replaceChildren(cell("No registrations yet.", 5));
 
           body.replaceChildren(
             ...list.map((row) => {
               const status = row.status || "Pending";
               const confirmed = status.toLowerCase() === "confirmed";
               const tr = document.createElement("tr");
+
+              const num = document.createElement("td");
+              num.className = "row-no";
+              num.textContent = refNo(row);
 
               const who = document.createElement("td");
               const strong = document.createElement("strong");
@@ -926,7 +945,7 @@
 
               wrap.append(toggle, details, del);
               actions.append(wrap);
-              tr.append(who, realm, st, actions);
+              tr.append(num, who, realm, st, actions);
               return tr;
             }),
           );
@@ -1021,7 +1040,7 @@
               "Registered",
               row.created_at ? new Date(row.created_at).toLocaleString() : "—",
             ],
-            ["Reference", "#" + row.id],
+            ["Reference", refNo(row)],
           );
           const people = Array.isArray(row.delegate_list) ? row.delegate_list : [];
 
@@ -1425,6 +1444,22 @@
               );
             document.head.appendChild(el);
           });
+        // The spreadsheet library, pinned the same way as the PDF ones: an exact
+        // version and an exact hash, because this page holds the admin token
+        // and students' details and a CDN serving other bytes must not run.
+        const XLSX_LIB = [
+          "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+          "sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==",
+        ];
+        let xlsxLib = null;
+        const ensureXlsx = () =>
+          (xlsxLib =
+            xlsxLib ||
+            (async () => {
+              await loadScript(XLSX_LIB);
+              if (!window.XLSX) throw new Error("The spreadsheet library did not load.");
+            })());
+
         const ensurePdf = () =>
           (pdfLibs =
             pdfLibs ||
@@ -1667,8 +1702,7 @@
             doc.setFontSize(9.5);
             doc.setTextColor.apply(doc, SOFT);
             doc.text(
-              "#" +
-                r.id +
+              refNo(r) +
                 "   Registered " +
                 (r.created_at ? new Date(r.created_at).toLocaleString() : "\u2014"),
               M,
@@ -1916,126 +1950,107 @@
           }
         });
 
-        $("csvBtn").addEventListener("click", () => {
+        $("csvBtn").addEventListener("click", async () => {
           if (!rows.length)
             return say($("tableMsg"), "Nothing to export yet.", false);
+          const btn = $("csvBtn");
+          btn.disabled = true;
+          try {
+            await ensureXlsx();
 
-          // One row per PERSON, not per delegation. The old sheet put every
-          // delegate in their own columns, which ran to 48 of them and meant
-          // scrolling sideways to read one school. A person per row fits on a
-          // screen, sorts and filters the way a spreadsheet is meant to, and
-          // still gives one row per delegation if you filter Role to the head.
-          const head = [
-            "Reference",
-            "Registered",
-            "Status",
-            "School",
-            "School email",
-            "Team name",
-            "Supervisor",
-            "Supervisor number",
-            "Supervisor email",
-            "Delegates",
-            "Realm count",
-            "Realms",
-            "Role",
-            "Name",
-            "Email",
-            "Number",
-            "Student CNIC",
-            "Parent CNIC",
-            "Photo on file",
-          ];
-
-          // Sorts correctly as text in any spreadsheet, unlike a locale string.
-          const stamp = (v) => {
-            if (!v) return "";
-            const d = new Date(v);
-            if (isNaN(d)) return "";
-            const pad = (n) => String(n).padStart(2, "0");
-            return (
-              d.getFullYear() +
-              "-" + pad(d.getMonth() + 1) +
-              "-" + pad(d.getDate()) +
-              " " + pad(d.getHours()) +
-              ":" + pad(d.getMinutes())
-            );
-          };
-
-          const lines = [];
-          rows.forEach((r) => {
-            const keys = realmsOf(r);
-            const list = Array.isArray(r.delegate_list) ? r.delegate_list : [];
-            // the delegation's own details, repeated on each of its people so
-            // every row stands on its own when the sheet is sorted or filtered
-            const delegation = [
-              "#" + r.id,
-              stamp(r.created_at),
-              r.status || "Pending",
-              r.school,
-              r.school_email,
-              r.team_name,
-              r.supervisor_name || r.contact_name,
-              r.supervisor_phone || r.phone,
-              r.supervisor_email || r.contact_email,
-              r.delegates,
-              keys.length,
-              keys.map(realmName).join(" | "),
+            // One row per PERSON, not per delegation. A delegate used to get
+            // their own five columns, so a delegation of seven ran to 48 of
+            // them. A person per row fits on a screen and sorts and filters
+            // the way a spreadsheet is meant to; filter Role to the head and
+            // you have one row per delegation again.
+            const head = [
+              "No.", "Registered", "Status",
+              "School", "School email", "Team name",
+              "Supervisor", "Supervisor number", "Supervisor email",
+              "Delegates", "Realm count", "Realms",
+              "Role", "Name", "Email", "Number",
+              "Student CNIC", "Parent CNIC", "Photo on file",
             ];
-            const person = (role, p) => [
-              ...delegation,
-              role,
-              p.name,
-              p.email,
-              p.phone,
-              p.cnic,
-              p.parentCnic,
-              p.photo ? "Yes" : "No",
-            ];
-            lines.push(person("Head delegate", r.head_delegate || {}));
-            list.forEach((d, i) =>
-              lines.push(person("Delegate " + (i + 2), d || {})),
+
+            // Sorts correctly as text, unlike a locale string.
+            const stamp = (v) => {
+              if (!v) return "";
+              const d = new Date(v);
+              if (isNaN(d)) return "";
+              const pad = (n) => String(n).padStart(2, "0");
+              return (
+                d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+                " " + pad(d.getHours()) + ":" + pad(d.getMinutes())
+              );
+            };
+
+            const lines = [];
+            rows.forEach((r) => {
+              const keys = realmsOf(r);
+              const list = Array.isArray(r.delegate_list) ? r.delegate_list : [];
+              const delegation = [
+                refNo(r), stamp(r.created_at), r.status || "Pending",
+                r.school, r.school_email, r.team_name,
+                r.supervisor_name || r.contact_name,
+                r.supervisor_phone || r.phone,
+                r.supervisor_email || r.contact_email,
+                r.delegates, keys.length, keys.map(realmName).join(", "),
+              ];
+              const person = (role, q) => [
+                ...delegation, role, q.name, q.email, q.phone,
+                q.cnic, q.parentCnic, q.photo ? "Yes" : "No",
+              ];
+              lines.push(person("Head delegate", r.head_delegate || {}));
+              list.forEach((d, i) => lines.push(person("Delegate " + (i + 2), d || {})));
+            });
+
+            const table = [head, ...lines].map((row) =>
+              row.map((v) => (v == null ? "" : String(v))),
             );
-          });
+            const sheet = XLSX.utils.aoa_to_sheet(table);
 
-          // Excel and Google Sheets read 03001234567 as a number and drop the
-          // leading zero, and they turn 35201-1234567-1 into a date or a sum.
-          // Writing those as a text formula is the one form all three of
-          // Excel, Sheets and LibreOffice read back as the exact string.
-          const esc = (v) => {
-            const t = v == null ? "" : String(v);
-            const q = t.replace(/"/g, '""');
-            // Only strings this code recognises as a number get the formula
-            // form, so nothing a registrant typed can become one.
-            if (/^[0-9+][0-9+\-\s]{6,}$/.test(t)) return '"=""' + q + '"""';
-            // A school or delegate name is whatever somebody typed into the
-            // public form. Excel runs a cell that opens with = + - or @, so
-            // those are pushed behind an apostrophe and stay plain text.
-            if (/^[=+\-@\t\r]/.test(t))
-              return '"' + "'" + q + '"';
-            return '"' + q + '"';
-          };
+            // Every cell is written as text. Excel then keeps the leading zero
+            // on 03001234567, leaves a CNIC alone instead of reading it as a
+            // date, and never runs a cell that happens to start with = + - @,
+            // which matters because these names come from the public form.
+            const last = XLSX.utils.encode_cell({ r: table.length - 1, c: head.length - 1 });
+            Object.keys(sheet).forEach((ref) => {
+              if (ref[0] === "!") return;
+              sheet[ref].t = "s";
+            });
 
-          const csv = [head, ...lines]
-            .map((r) => r.map(esc).join(","))
-            .join("\r\n");
-          const url = URL.createObjectURL(
-            new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }),
-          );
-          const a = document.createElement("a");
-          a.href = url;
-          a.download =
-            "rsic-registrations-" +
-            new Date().toISOString().slice(0, 10) +
-            ".csv";
-          a.click();
-          URL.revokeObjectURL(url);
-          say(
-            $("tableMsg"),
-            "Exported " + lines.length + " people from " + rows.length +
-              " delegation" + (rows.length > 1 ? "s" : "") + ", text only.",
-            true,
-          );
+            // The sheet opened tightly packed and every column had to be
+            // widened by hand, so each one is sized to its own longest value.
+            sheet["!cols"] = head.map((title, c) => {
+              const longest = table.reduce(
+                (n, row) => Math.max(n, (row[c] || "").length),
+                title.length,
+              );
+              return { wch: Math.min(Math.max(longest + 4, 12), 46) };
+            });
+            // A roomier header and rows that do not need dragging open.
+            sheet["!rows"] = table.map((_, i) => ({ hpt: i === 0 ? 30 : 22 }));
+            // Sort and filter straight from the header.
+            sheet["!autofilter"] = { ref: "A1:" + last };
+            sheet["!freeze"] = { xSplit: "0", ySplit: "1" };
+
+            const book = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(book, sheet, "Registrations");
+            XLSX.writeFile(
+              book,
+              "rsic-registrations-" + new Date().toISOString().slice(0, 10) + ".xlsx",
+            );
+            say(
+              $("tableMsg"),
+              "Exported " + lines.length + " people from " + rows.length +
+                " delegation" + (rows.length > 1 ? "s" : "") + ".",
+              true,
+            );
+          } catch (e) {
+            say($("tableMsg"), e.message || "Could not build the spreadsheet.", false);
+          } finally {
+            btn.disabled = false;
+          }
         });
 
         // ---------------------------------------------------------- the switch
