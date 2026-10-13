@@ -2030,9 +2030,11 @@
             });
             // A roomier header and rows that do not need dragging open.
             sheet["!rows"] = table.map((_, i) => ({ hpt: i === 0 ? 30 : 22 }));
-            // Sort and filter straight from the header.
+            // Sort and filter straight from the header. Freezing the header
+            // row is not possible here: SheetJS's free build writes no pane
+            // element whatever form you give !freeze, checked against the
+            // generated XML, so it was left out rather than left dead.
             sheet["!autofilter"] = { ref: "A1:" + last };
-            sheet["!freeze"] = { xSplit: "0", ySplit: "1" };
 
             const book = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(book, sheet, "Registrations");
