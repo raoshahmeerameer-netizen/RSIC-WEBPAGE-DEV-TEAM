@@ -1531,8 +1531,10 @@ if (regForm) {
     // mail client still gets it, and everyone else still gets the address.
     a.addEventListener("click", async () => {
       const ok = await copy(address);
-      if (ok) flash(label, "Copied");
-      else selectText(label);
+      // Always say something. If the clipboard is refused the address is
+      // selected instead, which on its own is far too quiet to notice.
+      if (!ok) selectText(label);
+      flash(label, ok ? "Copied" : "Copy it from here");
     });
 
     // The footer address sits in a tight row of icons, so it gets the click
