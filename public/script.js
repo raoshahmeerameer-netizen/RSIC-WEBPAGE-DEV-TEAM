@@ -1096,6 +1096,33 @@ const rsicContentReady = (async () => {
   }
 })();
 
+// The three people who built the site, as tags rather than a dim line of
+// prose. It runs after the content fill so it is never overwritten, and off
+// whatever text is in the span, so it still works if the backend is down.
+// credit.lead names the one tag that carries the brand's pink dot.
+rsicContentReady.then((content) => {
+  const span = document.querySelector('[data-cms="credit.builders"]');
+  if (!span || span.dataset.tagged) return;
+  const names = span.textContent
+    .split(/,| and /i)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (names.length < 2) return;
+  const lead = String((content && content["credit.lead"]) || "")
+    .trim()
+    .toLowerCase();
+  span.dataset.tagged = "yes";
+  span.classList.add("credit-tags");
+  span.textContent = "";
+  names.forEach((name) => {
+    const tag = document.createElement("span");
+    tag.className =
+      "credit-tag" + (lead && name.toLowerCase() === lead ? " is-lead" : "");
+    tag.textContent = name;
+    span.appendChild(tag);
+  });
+});
+
 // ---------------------------------------------------------------- registration
 // One route only: a school registers a delegation. It takes exactly one core
 // realm, either Project Nexus or Gaia's Exchange, which are alternatives, and
