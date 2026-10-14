@@ -1,0 +1,36 @@
+# RSIC 2026
+
+> RSIC is a student-run inter-school competition in Pakistan, presented by The City School, Ravi Campus. It runs from Friday 13 to Sunday 15 November 2026 at TCS Ravi, with eleven competitions called Realms.
+
+Schools register as a delegation of 5 to 7 delegates. A delegation enters 4 to 6 realms: one core realm (Project Nexus or Gaia's Exchange) and 3 to 5 more. Entry is open to O Levels (Grade 9) and above. Registration opens soon.
+
+## Pages
+
+- [Home](https://cityrsic.com/): countdown, the eleven realms and how to enter
+- [About](https://cityrsic.com/about): why RSIC exists and the disciplines it covers
+- [Realms](https://cityrsic.com/realms): all eleven realms, with format and team size
+- [Register](https://cityrsic.com/register): the delegation form, downloadable forms and common questions
+- [Experience](https://cityrsic.com/experience): what taking part is like
+- [Team](https://cityrsic.com/team): the Founders Council and the Executive Council's letter
+- [Code of Conduct](https://cityrsic.com/conduct): the Charter of Discipline
+- [Updates](https://cityrsic.com/updates): what has been released and what is coming
+- [Media](https://cityrsic.com/media): campaign art
+
+## Realms
+
+- [Project Nexus](https://cityrsic.com/realms/nexus): Pure Sciences, core realm
+- [Gaia's Exchange](https://cityrsic.com/realms/gaias-exchange): Environmental Business, core realm
+- [The Cartesian Realm](https://cityrsic.com/realms/cartesian): Mathematics
+- [The Watson Street](https://cityrsic.com/realms/watson-street): Biology
+- [Curie's Chamber](https://cityrsic.com/realms/curies-chamber): Chemistry
+- [Astral Axiom](https://cityrsic.com/realms/astral-axiom): Physics
+- [Hypatia's Enclave](https://cityrsic.com/realms/hypatias-enclave): Computer Science
+- [Pterion's Sanctum](https://cityrsic.com/realms/pterions-sanctum): Psychology
+- [The Joker's Act](https://cityrsic.com/realms/jokers-act): Film & Drama
+- [Athena's Bench](https://cityrsic.com/realms/athenas-bench): Law & Sociology
+- [Theseus' Circuit](https://cityrsic.com/realms/theseus-circuit): Robotics
+
+## Contact
+
+- Email: raviscienceandinnovation@gmail.com
+- Instagram: https://www.instagram.com/rsic.ravi/

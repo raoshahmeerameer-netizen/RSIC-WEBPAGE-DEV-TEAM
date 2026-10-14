@@ -46,6 +46,9 @@ const app = express();
 // global and eleven bad guesses from anyone would lock the owner out.
 app.set("trust proxy", 1);
 
+// No need to tell every visitor which framework serves the site.
+app.disable("x-powered-by");
+
 // Headers the CDN does not set for us.
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -996,6 +999,12 @@ app.get(["/admin", "/admin.html", "/admindashboard.html"], (_req, res) =>
 // before express.static looks for a directory index that does not exist.
 app.get(["/realms", "/realms/"], (_req, res) => sendPage(res, "realms.html"));
 app.get(["/team", "/team/"], (_req, res) => sendPage(res, "team.html"));
+
+// Browsers and crawlers ask for /favicon.ico whatever the page links, so
+// point them at the head icon instead of logging a 404 on every visit.
+app.get("/favicon.ico", (_req, res) =>
+  res.redirect(301, "/assets/icon-48.png"),
+);
 
 // One address per page: /about, never /about.html.
 app.get(/^\/(.+)\.html$/, (req, res) => {
