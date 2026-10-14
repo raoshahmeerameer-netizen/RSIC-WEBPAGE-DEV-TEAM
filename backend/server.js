@@ -5,6 +5,8 @@ const cors = require("cors");
 const multer = require("multer");
 const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config({ path: __dirname + "/.env" });
+// Loaded after dotenv, because it reads the mail credentials at require time.
+const { sendConfirmation, mailConfigured } = require("./mail");
 
 // ---------------------------------------------------------------- config
 const {
@@ -568,16 +570,56 @@ app.get("/api/registrations", requireAdmin, async (_req, res) => {
 
 app.patch("/api/registrations/:id", requireAdmin, async (req, res) => {
   const status = req.body && req.body.status;
+  const resend = Boolean(req.body && req.body.resend);
   if (!["Pending", "Confirmed"].includes(status))
     return res
       .status(400)
       .json({ error: "Status must be Pending or Confirmed." });
+
+  // Read the row before changing it. The confirmation needs the school, the
+  // realms and both addresses, and the old status is what decides whether this
+  // is a real approval or a second click on something already approved.
+  const { data: row, error: readError } = await supabase
+    .from("registrations")
+    .select("*")
+    .eq("id", req.params.id)
+    .maybeSingle();
+  if (readError) return res.status(500).json({ error: readError.message });
+  if (!row) return res.status(404).json({ error: "No such registration." });
+
+  const wasConfirmed = row.status === "Confirmed";
+
   const { error } = await supabase
     .from("registrations")
     .update({ status })
     .eq("id", req.params.id);
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ ok: true });
+
+  // Approving mails the head delegate and the supervisor. Confirming something
+  // already confirmed sends nothing, so a second click cannot mail a school
+  // twice; Resend asks for it deliberately.
+  let mail = null;
+  if (status === "Confirmed" && (!wasConfirmed || resend)) {
+    let content = {};
+    try {
+      content = await loadContent();
+    } catch (_e) {
+      // The template falls back to the wording built into mail.js, so an
+      // unreachable site_content still gets a correct confirmation out.
+    }
+    mail = await sendConfirmation({ ...row, status }, content);
+    if (!mail.ok)
+      console.error(
+        "Confirmation email failed for registration " +
+          (row.reg_no || row.id) +
+          ": " +
+          mail.error,
+      );
+  }
+
+  // The approval itself has already been saved. A mail server having a moment
+  // is reported back for the dashboard to show, never a reason to fail it.
+  res.json({ ok: true, mail });
 });
 
 app.delete("/api/registrations/:id", requireAdmin, async (req, res) => {
@@ -784,7 +826,16 @@ app.use((err, _req, res, next) => {
   return next(err);
 });
 
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.get("/api/health", (_req, res) =>
+  // node is the major version only, and it is here because the mail library
+  // needs Node 20 or newer: it is the one way to check what the host runs
+  // without putting the admin password into a script.
+  res.json({
+    ok: true,
+    node: "v" + process.versions.node.split(".")[0],
+    mail: mailConfigured(),
+  }),
+);
 
 // ---------------------------------------------------------------- the website
 // The site and the API share one origin, so the pages call /api/... with no

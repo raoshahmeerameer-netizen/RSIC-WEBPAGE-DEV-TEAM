@@ -943,7 +943,19 @@
               del.textContent = "Delete";
               del.addEventListener("click", () => remove(row, del));
 
-              wrap.append(toggle, details, del);
+              // A delegation that is already confirmed gets a deliberate
+              // resend, for a confirmation that bounced or was deleted. The
+              // approve path itself never mails the same row twice.
+              if (confirmed) {
+                const again = document.createElement("button");
+                again.className = "action-btn ghost";
+                again.type = "button";
+                again.textContent = "Resend email";
+                again.addEventListener("click", () =>
+                  setStatus(row.id, "Confirmed", again, true),
+                );
+                wrap.append(toggle, again, details, del);
+              } else wrap.append(toggle, details, del);
               actions.append(wrap);
               tr.append(num, who, realm, st, actions);
               return tr;
@@ -976,14 +988,40 @@
           );
         }
 
-        async function setStatus(id, status, btn) {
+        async function setStatus(id, status, btn, resend) {
           btn.disabled = true;
           try {
-            await request("/api/registrations/" + id, {
+            const data = await request("/api/registrations/" + id, {
               method: "PATCH",
-              body: JSON.stringify({ status }),
+              body: JSON.stringify(
+                resend ? { status, resend: true } : { status },
+              ),
             });
+            // loadRegistrations clears tableMsg, so the outcome is reported
+            // after it rather than before.
             await loadRegistrations();
+            const mail = data && data.mail;
+            if (!mail)
+              say(
+                $("tableMsg"),
+                status === "Confirmed" ? "Approved." : "Set back to pending.",
+                true,
+              );
+            else if (mail.ok)
+              say(
+                $("tableMsg"),
+                "Approved. Confirmation emailed to " + mail.to.join(" and "),
+                true,
+              );
+            else if (mail.skipped)
+              say($("tableMsg"), "Approved. " + mail.error, true);
+            else
+              say(
+                $("tableMsg"),
+                "Approved, but the confirmation email did not send. " +
+                  mail.error,
+                false,
+              );
           } catch (err) {
             say($("tableMsg"), err.message, false);
             btn.disabled = false;
