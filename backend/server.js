@@ -13,6 +13,7 @@ const {
   FIELD_GROUPS,
   ALL_FIELDS,
   MAIL_USER,
+  MAIL_REPLY_TO,
 } = require("./mail");
 
 // ---------------------------------------------------------------- config
@@ -353,7 +354,7 @@ app.get("/api/admin/email-config", requireAdmin, async (_req, res) => {
         EMAIL_KEYS.map((k) => [k, content[k] == null ? "" : content[k]]),
       ),
       mailReady: mailConfigured(),
-      mailUser: MAIL_USER || "",
+      mailUser: MAIL_REPLY_TO || MAIL_USER || "",
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -390,7 +391,10 @@ app.post("/api/admin/email-test", requireAdmin, async (req, res) => {
     const content = await draftContent(req.body);
     const row = {
       ...SAMPLE_DELEGATION,
-      head_delegate: { ...SAMPLE_DELEGATION.head_delegate, email: MAIL_USER },
+      head_delegate: {
+        ...SAMPLE_DELEGATION.head_delegate,
+        email: MAIL_REPLY_TO || MAIL_USER,
+      },
       supervisor_email: "",
     };
     const result = await sendConfirmation(row, {
