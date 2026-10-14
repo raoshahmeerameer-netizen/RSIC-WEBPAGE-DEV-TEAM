@@ -23,10 +23,19 @@ const {
   MAIL_USER,
   MAIL_APP_PASSWORD,
   MAIL_FROM_NAME = "R.S.I.C",
+  // Gmail by default, but any SMTP provider works by setting these. The sender
+  // is MAIL_FROM when it is given, so a mailbox on cityrsic.com or a sending
+  // service needs no code change at all.
+  MAIL_HOST = "smtp.gmail.com",
   // Some hosts block outbound 465. If that turns out to be the case, setting
-  // MAIL_PORT to 587 switches to STARTTLS with no code change.
+  // MAIL_PORT to 587 switches to STARTTLS.
   MAIL_PORT = "465",
+  MAIL_FROM,
+  // Where replies should go, when that is not the address sending.
+  MAIL_REPLY_TO,
 } = process.env;
+
+const fromAddress = () => MAIL_FROM || MAIL_USER;
 
 const mailConfigured = () =>
   Boolean(nodemailer && MAIL_USER && MAIL_APP_PASSWORD);
@@ -35,7 +44,7 @@ let transport = null;
 const getTransport = () => {
   if (!transport)
     transport = nodemailer.createTransport({
-      host: "smtp.gmail.com",
+      host: MAIL_HOST,
       port: Number(MAIL_PORT) || 465,
       secure: Number(MAIL_PORT) !== 587,
       auth: {
@@ -695,7 +704,8 @@ const sendConfirmation = async (row, content) => {
 
   try {
     const info = await getTransport().sendMail({
-      from: '"' + MAIL_FROM_NAME + '" <' + MAIL_USER + ">",
+      from: '"' + MAIL_FROM_NAME + '" <' + fromAddress() + ">",
+      ...(MAIL_REPLY_TO ? { replyTo: MAIL_REPLY_TO } : {}),
       to,
       subject,
       text,
