@@ -6,7 +6,14 @@ const multer = require("multer");
 const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config({ path: __dirname + "/.env" });
 // Loaded after dotenv, because it reads the mail credentials at require time.
-const { sendConfirmation, mailConfigured } = require("./mail");
+const {
+  sendConfirmation,
+  renderConfirmation,
+  mailConfigured,
+  FIELD_GROUPS,
+  ALL_FIELDS,
+  MAIL_USER,
+} = require("./mail");
 
 // ---------------------------------------------------------------- config
 const {
@@ -277,6 +284,125 @@ app.patch("/api/content", requireAdmin, async (req, res) => {
   }
   await loadContent(true);
   res.json({ ok: true, updated: entries.length });
+});
+
+// ------------------------------------------------- the confirmation email page
+// A made-up delegation, so the Email page can show what the mail looks like
+// before any school has registered and without putting a real one on screen.
+const SAMPLE_DELEGATION = {
+  id: 0,
+  reg_no: 1,
+  school: "Beaconhouse School System, Johar Town Campus",
+  team_name: "Team Orion",
+  supervisor_name: "Mrs. Ayesha Siddiqui",
+  supervisor_phone: "+92 300 1234567",
+  supervisor_email: "supervisor@example.edu.pk",
+  delegates: 7,
+  realms: ["business", "math", "cs", "psych", "robotics"],
+  head_delegate: {
+    name: "Hamza Raza",
+    email: "head@example.com",
+    phone: "+92 321 7654321",
+  },
+  delegate_list: [
+    { name: "Zara Khan" },
+    { name: "Bilal Ahmed" },
+    { name: "Fatima Noor" },
+    { name: "Usman Tariq" },
+    { name: "Mariam Javed" },
+    { name: "Daniyal Shah" },
+  ],
+};
+
+const EMAIL_KEYS = [
+  "email.confirm.enabled",
+  "email.confirm.subject",
+  "email.confirm.intro",
+  "email.confirm.notes",
+  "email.confirm.signoff",
+  "email.confirm.fields",
+];
+
+// The draft the page is showing, laid over the stored settings, so a preview
+// reflects unsaved edits without writing them to the database first.
+const draftContent = async (body) => {
+  const content = { ...(await loadContent()) };
+  const draft = (body && body.draft) || {};
+  EMAIL_KEYS.forEach((k) => {
+    if (typeof draft[k] === "string") content[k] = draft[k].slice(0, 8000);
+  });
+  return content;
+};
+
+app.get("/api/admin/email-config", requireAdmin, async (_req, res) => {
+  try {
+    const content = await loadContent();
+    const stored = content["email.confirm.fields"];
+    res.json({
+      groups: FIELD_GROUPS,
+      // null means nothing has been chosen yet, which the renderer reads as
+      // everything on, so the page ticks every box to match.
+      fields:
+        stored == null
+          ? ALL_FIELDS
+          : String(stored)
+              .split(",")
+              .map((s) => s.trim())
+              .filter((s) => ALL_FIELDS.indexOf(s) !== -1),
+      values: Object.fromEntries(
+        EMAIL_KEYS.map((k) => [k, content[k] == null ? "" : content[k]]),
+      ),
+      mailReady: mailConfigured(),
+      mailUser: MAIL_USER || "",
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/admin/email-preview", requireAdmin, async (req, res) => {
+  try {
+    const content = await draftContent(req.body);
+    const { subject, html, text } = renderConfirmation(
+      SAMPLE_DELEGATION,
+      content,
+    );
+    res.json({ subject, html, text });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// A test only ever goes to the organisers' own address, the one the mail is
+// sent from. There is no field to type a recipient into, so a leaked dashboard
+// password cannot turn this into a way to mail strangers.
+let lastTestAt = 0;
+app.post("/api/admin/email-test", requireAdmin, async (req, res) => {
+  if (!mailConfigured())
+    return res.status(400).json({
+      error:
+        "Email is not set up yet: MAIL_USER and MAIL_APP_PASSWORD are missing on the server.",
+    });
+  if (Date.now() - lastTestAt < 10000)
+    return res.status(429).json({ error: "Just a moment, that was sent twice." });
+  lastTestAt = Date.now();
+  try {
+    const content = await draftContent(req.body);
+    const row = {
+      ...SAMPLE_DELEGATION,
+      head_delegate: { ...SAMPLE_DELEGATION.head_delegate, email: MAIL_USER },
+      supervisor_email: "",
+    };
+    const result = await sendConfirmation(row, {
+      ...content,
+      // a test is sent even when sending is switched off, because that is the
+      // setting you are most likely to be testing around
+      "email.confirm.enabled": "on",
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ---------------------------------------------------------------- registration
@@ -842,7 +968,7 @@ const sendPage = (res, file) => {
   // the dashboard is never worth caching; the public pages revalidate
   res.setHeader(
     "Cache-Control",
-    /^(admin|advanced)\.html$/.test(file)
+    /^(admin|advanced|admin-email)\.html$/.test(file)
       ? "no-store"
       : "public, max-age=0, must-revalidate",
   );
@@ -854,6 +980,9 @@ const sendPage = (res, file) => {
 app.get("/admindashboard", (_req, res) => sendPage(res, "admin.html"));
 app.get("/admindashboard/advanced", (_req, res) =>
   sendPage(res, "advanced.html"),
+);
+app.get("/admindashboard/email", (_req, res) =>
+  sendPage(res, "admin-email.html"),
 );
 app.get(["/admin", "/admin.html", "/admindashboard.html"], (_req, res) =>
   res.redirect(301, "/admindashboard"),

@@ -75,6 +75,90 @@ const FALLBACK = {
   map: "https://maps.app.goo.gl/rr4QBxRrdJW5JUn19",
 };
 
+// ------------------------------------------------------ what goes in the email
+// Which details the email carries is the owner's choice, made on the Email page
+// in the dashboard and stored as a comma separated list in
+// email.confirm.fields. This list is the one source of truth: the page builds
+// its checkboxes from it, and the renderer reads the same ids, so the two
+// cannot drift apart.
+const FIELD_GROUPS = [
+  {
+    id: "top",
+    title: "Top of the email",
+    fields: [["regno_box", "The big registration number box"]],
+  },
+  {
+    id: "delegation",
+    title: "Delegation",
+    fields: [
+      ["school", "School"],
+      ["team", "Team name"],
+      ["delegate_count", "Number of delegates"],
+    ],
+  },
+  {
+    id: "realms",
+    title: "Realms",
+    fields: [["realms", "The realms they entered"]],
+  },
+  {
+    id: "supervisor",
+    title: "Supervisor",
+    fields: [
+      ["supervisor_name", "Name"],
+      ["supervisor_email", "Email"],
+      ["supervisor_phone", "Phone"],
+    ],
+  },
+  {
+    id: "head",
+    title: "Head delegate",
+    fields: [
+      ["head_name", "Name"],
+      ["head_email", "Email"],
+      ["head_phone", "Phone"],
+    ],
+  },
+  {
+    id: "delegates",
+    title: "Delegates",
+    fields: [["delegates", "Their names"]],
+  },
+  {
+    id: "event",
+    title: "The event",
+    fields: [
+      ["dates", "Dates"],
+      ["venue", "Venue"],
+      ["map", "Google Maps link"],
+    ],
+  },
+  {
+    id: "contact",
+    title: "Contact",
+    fields: [["contact", "Contact email address"]],
+  },
+];
+
+const ALL_FIELDS = FIELD_GROUPS.reduce(
+  (all, g) => all.concat(g.fields.map((f) => f[0])),
+  [],
+);
+
+// No stored value means everything is included, so the email is complete before
+// anyone visits the page. An empty stored value genuinely means none, which is
+// why the two cases are told apart rather than both falling back.
+const visibleFields = (content) => {
+  const raw = content && content["email.confirm.fields"];
+  if (raw == null) return new Set(ALL_FIELDS);
+  return new Set(
+    String(raw)
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => ALL_FIELDS.indexOf(s) !== -1),
+  );
+};
+
 // ------------------------------------------------------------------ helpers
 const escapeHtml = (s) =>
   String(s)
@@ -147,61 +231,73 @@ const detailsOf = (row, content) => {
 };
 
 // ------------------------------------------------------------- plain text
-const textVersion = (d, intro, notes, signoff) => {
+const textVersion = (d, intro, notes, signoff, show) => {
   const out = [];
   const rule = "------------------------------------------------------------";
-  const section = (title) => {
+  // A section only appears when something is left in it, so switching every
+  // field off removes the heading too rather than leaving an empty one.
+  const block = (title, lines) => {
+    const kept = lines.filter(Boolean);
+    if (!kept.length) return;
     out.push("", rule, title.toUpperCase(), rule);
+    kept.forEach((l) => out.push(l));
   };
-  const pair = (label, value) => {
-    if (value) out.push("  " + (label + ":").padEnd(22) + value);
-  };
+  const pair = (on, label, value) =>
+    on && value ? "  " + (label + ":").padEnd(22) + value : "";
 
   out.push("RSIC 2026");
   out.push("Different minds. One universe.");
   out.push("");
   out.push("REGISTRATION CONFIRMED");
-  out.push("Registration number: " + d.regNo);
+  if (show("regno_box")) out.push("Registration number: " + d.regNo);
   out.push("");
   out.push("Dear " + (d.head.name || "delegate") + ",");
   out.push("");
   out.push(intro);
 
-  section("Delegation");
-  pair("Registration number", d.regNo);
-  pair("School", d.school);
-  pair("Team name", d.team);
-  if (d.total != null) pair("Delegates", String(d.total));
+  block("Delegation", [
+    pair(show("school"), "School", d.school),
+    pair(show("team"), "Team name", d.team),
+    pair(
+      show("delegate_count"),
+      "Delegates",
+      d.total != null ? String(d.total) : "",
+    ),
+  ]);
 
-  if (d.realms.length) {
-    section("Realms entered (" + d.realms.length + ")");
-    d.realms.forEach((r, i) => out.push("  " + (i + 1) + ". " + r));
-  }
+  if (show("realms") && d.realms.length)
+    block(
+      "Realms entered (" + d.realms.length + ")",
+      d.realms.map((r, i) => "  " + (i + 1) + ". " + r),
+    );
 
-  section("Supervisor");
-  pair("Name", d.supervisor.name);
-  pair("Email", d.supervisor.email);
-  pair("Phone", d.supervisor.phone);
+  block("Supervisor", [
+    pair(show("supervisor_name"), "Name", d.supervisor.name),
+    pair(show("supervisor_email"), "Email", d.supervisor.email),
+    pair(show("supervisor_phone"), "Phone", d.supervisor.phone),
+  ]);
 
-  section("Head delegate");
-  pair("Name", d.head.name);
-  pair("Email", d.head.email);
-  pair("Phone", d.head.phone);
+  block("Head delegate", [
+    pair(show("head_name"), "Name", d.head.name),
+    pair(show("head_email"), "Email", d.head.email),
+    pair(show("head_phone"), "Phone", d.head.phone),
+  ]);
 
-  if (d.others.length) {
-    section("Delegates (" + d.others.length + ")");
-    d.others.forEach((n, i) => out.push("  " + (i + 1) + ". " + n));
-    out.push("");
-    out.push("  The head delegate is listed separately above.");
-  }
+  if (show("delegates") && d.others.length)
+    block(
+      "Delegates (" + d.others.length + ")",
+      d.others
+        .map((n, i) => "  " + (i + 1) + ". " + n)
+        .concat(["", "  The head delegate is listed separately above."]),
+    );
 
-  section("The event");
-  pair("Dates", d.dates);
-  pair("Venue", d.venue);
-  if (d.map) pair("Map", d.map);
+  block("The event", [
+    pair(show("dates"), "Dates", d.dates),
+    pair(show("venue"), "Venue", d.venue),
+    pair(show("map"), "Map", d.map),
+  ]);
 
-  section("Contact");
-  pair("Email", d.contact);
+  block("Contact", [pair(show("contact"), "Email", d.contact)]);
 
   out.push("", rule, "");
   out.push(notes);
@@ -323,14 +419,21 @@ const numbered = (items, note) => {
   );
 };
 
-const htmlVersion = (d, intro, notes, signoff) => {
-  const mapLink = d.map
-    ? '<a href="' +
-      escapeHtml(d.map) +
-      '" style="color:' +
-      C.pink +
-      ';text-decoration:none;font-weight:700">Open in Google Maps</a>'
-    : "";
+const htmlVersion = (d, intro, notes, signoff, show) => {
+  // A heading is only emitted when its table has rows, so switching every field
+  // in a section off takes the heading with it rather than leaving an empty one.
+  const section = (title, pairsList) => {
+    const body = rows(pairsList);
+    return body ? heading(title) + body : "";
+  };
+  const mapLink =
+    d.map && show("map")
+      ? '<a href="' +
+        escapeHtml(d.map) +
+        '" style="color:' +
+        C.pink +
+        ';text-decoration:none;font-weight:700">Open in Google Maps</a>'
+      : "";
 
   const parts = [
     '<!doctype html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>RSIC 2026 registration confirmed</title></head>',
@@ -368,7 +471,9 @@ const htmlVersion = (d, intro, notes, signoff) => {
       ";font-size:22px;color:" +
       C.text +
       '">Registration confirmed</td></tr>',
-    '<tr><td style="padding-top:14px"><table role="presentation" cellpadding="0" cellspacing="0" style="background:' +
+    !show("regno_box")
+      ? ""
+      : '<tr><td style="padding-top:14px"><table role="presentation" cellpadding="0" cellspacing="0" style="background:' +
       C.raised +
       ';border-radius:12px"><tr><td style="padding:12px 18px;font-family:' +
       SANS +
@@ -392,61 +497,59 @@ const htmlVersion = (d, intro, notes, signoff) => {
       ",</td></tr>",
     '<tr><td style="padding-top:12px">' + paras(intro) + "</td></tr>",
 
-    heading("Delegation"),
     // The registration number is not repeated here: it has its own box above
     // and the footer carries it again.
-    rows([
-      ["School", d.school],
-      ["Team name", d.team],
-      ["Delegates", d.total != null ? String(d.total) : ""],
+    section("Delegation", [
+      ["School", show("school") ? d.school : ""],
+      ["Team name", show("team") ? d.team : ""],
+      [
+        "Delegates",
+        show("delegate_count") && d.total != null ? String(d.total) : "",
+      ],
     ]),
   ];
 
-  if (d.realms.length) {
+  if (show("realms") && d.realms.length) {
     parts.push(heading("Realms entered (" + d.realms.length + ")"));
     parts.push(numbered(d.realms, ""));
   }
 
-  parts.push(heading("Supervisor"));
   parts.push(
-    rows([
-      ["Name", d.supervisor.name],
-      ["Email", d.supervisor.email],
-      ["Phone", d.supervisor.phone],
+    section("Supervisor", [
+      ["Name", show("supervisor_name") ? d.supervisor.name : ""],
+      ["Email", show("supervisor_email") ? d.supervisor.email : ""],
+      ["Phone", show("supervisor_phone") ? d.supervisor.phone : ""],
     ]),
   );
 
-  parts.push(heading("Head delegate"));
   parts.push(
-    rows([
-      ["Name", d.head.name],
-      ["Email", d.head.email],
-      ["Phone", d.head.phone],
+    section("Head delegate", [
+      ["Name", show("head_name") ? d.head.name : ""],
+      ["Email", show("head_email") ? d.head.email : ""],
+      ["Phone", show("head_phone") ? d.head.phone : ""],
     ]),
   );
 
-  if (d.others.length) {
+  if (show("delegates") && d.others.length) {
     parts.push(heading("Delegates (" + d.others.length + ")"));
     parts.push(
       numbered(d.others, "The head delegate is listed separately above."),
     );
   }
 
-  parts.push(heading("The event"));
   parts.push(
-    rows([
-      ["Dates", d.dates],
-      ["Venue", d.venue],
-      ["Map", d.map ? "link" : "", mapLink],
+    section("The event", [
+      ["Dates", show("dates") ? d.dates : ""],
+      ["Venue", show("venue") ? d.venue : ""],
+      ["Map", mapLink ? "link" : "", mapLink],
     ]),
   );
 
-  parts.push(heading("Contact"));
   parts.push(
-    rows([
+    section("Contact", [
       [
         "Email",
-        d.contact,
+        show("contact") ? d.contact : "",
         '<a href="mailto:' +
           escapeHtml(d.contact) +
           '" style="color:' +
@@ -513,6 +616,45 @@ const recipientsFor = (row) => {
     });
 };
 
+// ----------------------------------------------------------------- render
+// Building the mail is separate from sending it, so the dashboard's Email page
+// can show exactly what will go out without a mail server being involved.
+const renderConfirmation = (row, content) => {
+  const c = content || {};
+  const d = detailsOf(row, c);
+  const fields = visibleFields(c);
+  const show = (id) => fields.has(id);
+
+  // The placeholders the editable prose can use.
+  const values = {
+    reg_no: d.regNo,
+    school: d.school || "your school",
+    team: d.team,
+    head_delegate: d.head.name || "delegate",
+    supervisor: d.supervisor.name,
+    delegates: d.total != null ? String(d.total) : "",
+    realms: d.realms.join(", "),
+    venue: d.venue,
+    dates: d.dates,
+    contact: d.contact,
+  };
+
+  // Flattened again after filling, which also covers a line break pasted into
+  // the subject field in the dashboard.
+  const subject = oneLine(
+    fill(c["email.confirm.subject"] || DEFAULT_SUBJECT, values),
+  );
+  const intro = fill(c["email.confirm.intro"] || DEFAULT_INTRO, values);
+  const notes = fill(c["email.confirm.notes"] || DEFAULT_NOTES, values);
+  const signoff = fill(c["email.confirm.signoff"] || DEFAULT_SIGNOFF, values);
+
+  return {
+    subject,
+    text: textVersion(d, intro, notes, signoff, show),
+    html: htmlVersion(d, intro, notes, signoff, show),
+  };
+};
+
 // ------------------------------------------------------------------- send
 const sendConfirmation = async (row, content) => {
   const to = recipientsFor(row);
@@ -549,37 +691,15 @@ const sendConfirmation = async (row, content) => {
       error: "Confirmation emails are switched off in the dashboard.",
     };
 
-  const d = detailsOf(row, c);
-  // The placeholders the editable prose can use.
-  const values = {
-    reg_no: d.regNo,
-    school: d.school || "your school",
-    team: d.team,
-    head_delegate: d.head.name || "delegate",
-    supervisor: d.supervisor.name,
-    delegates: d.total != null ? String(d.total) : "",
-    realms: d.realms.join(", "),
-    venue: d.venue,
-    dates: d.dates,
-    contact: d.contact,
-  };
-
-  // Flattened again after filling, which also covers a line break pasted into
-  // the subject field in the dashboard.
-  const subject = oneLine(
-    fill(c["email.confirm.subject"] || DEFAULT_SUBJECT, values),
-  );
-  const intro = fill(c["email.confirm.intro"] || DEFAULT_INTRO, values);
-  const notes = fill(c["email.confirm.notes"] || DEFAULT_NOTES, values);
-  const signoff = fill(c["email.confirm.signoff"] || DEFAULT_SIGNOFF, values);
+  const { subject, text, html } = renderConfirmation(row, c);
 
   try {
     const info = await getTransport().sendMail({
       from: '"' + MAIL_FROM_NAME + '" <' + MAIL_USER + ">",
       to,
       subject,
-      text: textVersion(d, intro, notes, signoff),
-      html: htmlVersion(d, intro, notes, signoff),
+      text,
+      html,
     });
     return { ok: true, to, id: info.messageId };
   } catch (err) {
@@ -593,4 +713,11 @@ const sendConfirmation = async (row, content) => {
   }
 };
 
-module.exports = { sendConfirmation, mailConfigured };
+module.exports = {
+  sendConfirmation,
+  renderConfirmation,
+  mailConfigured,
+  FIELD_GROUPS,
+  ALL_FIELDS,
+  MAIL_USER,
+};

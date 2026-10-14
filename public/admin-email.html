@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Confirmation email — RSIC 2026</title>
+    <meta
+      name="description"
+      content="Choose what the confirmation email says and which details it includes."
+    />
+    <link rel="icon" href="/assets/icon-32.png" sizes="32x32" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --page: #040b1a;
+        --card: #0b1d3b;
+        --raised: #10264a;
+        --text: #f3eee8;
+        --soft: #a8b5c8;
+        --faint: #8490a5;
+        --pink: #d0768f;
+        --pink-light: #e7a3b6;
+        --line: rgba(243, 238, 232, 0.14);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font-family: Manrope, system-ui, sans-serif;
+        font-size: 15px;
+      }
+      a {
+        color: var(--pink);
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 22px;
+        border-bottom: 1px solid var(--line);
+        position: sticky;
+        top: 0;
+        background: rgba(4, 11, 26, 0.94);
+        backdrop-filter: blur(8px);
+        z-index: 5;
+      }
+      .wm {
+        font-family: "Playfair Display", Georgia, serif;
+        font-size: 21px;
+        text-decoration: none;
+        color: var(--text);
+      }
+      .wm i {
+        font-style: normal;
+      }
+      .wm .dot {
+        color: var(--pink);
+      }
+      .bar-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .btn {
+        font: inherit;
+        font-weight: 700;
+        border-radius: 12px;
+        padding: 10px 16px;
+        border: 1px solid var(--pink);
+        background: var(--pink);
+        color: #061226;
+        cursor: pointer;
+        min-height: 42px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+      }
+      .btn:hover {
+        background: var(--pink-light);
+        border-color: var(--pink-light);
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--text);
+        border-color: var(--line);
+      }
+      .btn.ghost:hover {
+        border-color: var(--pink);
+        background: transparent;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 22px;
+        padding: 22px;
+        max-width: 1500px;
+        margin: 0 auto;
+        align-items: start;
+      }
+      @media (max-width: 1040px) {
+        main {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .panel {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 22px;
+        margin-bottom: 18px;
+      }
+      h1 {
+        font-family: "Playfair Display", Georgia, serif;
+        font-size: 27px;
+        margin: 0 0 6px;
+        font-weight: 700;
+      }
+      h1 em {
+        color: var(--pink);
+      }
+      h2 {
+        font-family: "Playfair Display", Georgia, serif;
+        font-size: 19px;
+        margin: 0 0 4px;
+        font-weight: 600;
+      }
+      .lede {
+        color: var(--soft);
+        margin: 0 0 18px;
+        line-height: 1.6;
+      }
+      .hint {
+        color: var(--faint);
+        font-size: 13px;
+        line-height: 1.55;
+        margin: 6px 0 0;
+      }
+      .hint code {
+        color: var(--soft);
+        word-break: break-word;
+      }
+      .group {
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+        margin-top: 14px;
+      }
+      .group:first-of-type {
+        border-top: 0;
+        margin-top: 0;
+        padding-top: 0;
+      }
+      .group-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      .group-title {
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--pink);
+        font-weight: 700;
+      }
+      .linkish {
+        background: none;
+        border: 0;
+        color: var(--faint);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        text-decoration: underline;
+        padding: 4px;
+      }
+      .linkish:hover {
+        color: var(--pink);
+      }
+      label.check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        min-height: 40px;
+      }
+      label.check:hover {
+        background: var(--raised);
+      }
+      label.check input {
+        width: 17px;
+        height: 17px;
+        accent-color: var(--pink);
+        flex: none;
+      }
+      .field {
+        margin-bottom: 14px;
+      }
+      .field label {
+        display: block;
+        font-size: 13px;
+        color: var(--soft);
+        margin-bottom: 6px;
+      }
+      input[type="text"],
+      textarea {
+        width: 100%;
+        background: var(--raised);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--text);
+        font: inherit;
+        padding: 11px 13px;
+        line-height: 1.6;
+      }
+      textarea {
+        min-height: 150px;
+        resize: vertical;
+      }
+      input:focus,
+      textarea:focus {
+        outline: 0;
+        border-color: var(--pink);
+        box-shadow: 0 0 0 3px rgba(208, 118, 143, 0.22);
+      }
+      .switch {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .msg {
+        margin: 12px 0 0;
+        font-size: 14px;
+        min-height: 20px;
+        line-height: 1.55;
+      }
+      .msg.good {
+        color: var(--pink-light);
+      }
+      .msg.bad {
+        color: #ff9d9d;
+      }
+      .preview-wrap {
+        position: sticky;
+        top: 86px;
+      }
+      @media (max-width: 1040px) {
+        .preview-wrap {
+          position: static;
+        }
+      }
+      .subject-line {
+        background: var(--raised);
+        border-radius: 10px;
+        padding: 11px 14px;
+        margin-bottom: 12px;
+        font-size: 14px;
+        word-break: break-word;
+      }
+      .subject-line span {
+        color: var(--faint);
+        font-size: 12px;
+        display: block;
+        margin-bottom: 3px;
+      }
+      iframe {
+        width: 100%;
+        height: 70vh;
+        min-height: 480px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #040b1a;
+      }
+      .gate {
+        max-width: 460px;
+        margin: 90px auto;
+        text-align: center;
+      }
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .tab {
+        font: inherit;
+        font-size: 13px;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--soft);
+        border-radius: 999px;
+        padding: 7px 14px;
+        cursor: pointer;
+      }
+      .tab.on {
+        background: var(--pink);
+        border-color: var(--pink);
+        color: #061226;
+        font-weight: 700;
+      }
+      pre.plain {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #040b1a;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: var(--soft);
+        max-height: 70vh;
+        overflow: auto;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <a class="wm" href="/admindashboard" aria-label="Back to the dashboard"
+        ><i>R</i><i>S</i><i>I</i><i>C</i><i class="dot">.</i></a
+      >
+      <div class="bar-actions">
+        <a class="btn ghost" href="/admindashboard">Back to dashboard</a>
+        <button class="btn ghost" type="button" id="testBtn" hidden>
+          Send me a test
+        </button>
+        <button class="btn" type="button" id="saveBtn" hidden>Save</button>
+      </div>
+    </div>
+
+    <div class="gate panel" id="gate" hidden>
+      <h1>Sign in <em>first.</em></h1>
+      <p class="lede">
+        Open the dashboard, sign in there, then come back to this page.
+      </p>
+      <a class="btn" href="/admindashboard">Go to the dashboard</a>
+    </div>
+
+    <main id="app" hidden>
+      <div>
+        <div class="panel">
+          <h1>The confirmation <em>email.</em></h1>
+          <p class="lede">
+            This is what a school is sent when you approve their delegation.
+            Changes here take effect the next time you approve one.
+          </p>
+          <div class="switch">
+            <div>
+              <h2>Send it at all</h2>
+              <p class="hint" style="margin: 0">
+                Off means approving a delegation sends nothing.
+              </p>
+            </div>
+            <label class="check"
+              ><input type="checkbox" id="enabled" /> <span>On</span></label
+            >
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>What the email includes</h2>
+          <p class="lede">
+            Untick anything you would rather leave out. A whole heading
+            disappears when everything under it is off.
+          </p>
+          <div id="groups"></div>
+        </div>
+
+        <div class="panel">
+          <h2>The wording</h2>
+          <p class="lede">
+            The details above are laid out for you. These are the words around
+            them.
+          </p>
+          <div class="field">
+            <label for="subject">Subject line</label>
+            <input type="text" id="subject" />
+          </div>
+          <div class="field">
+            <label for="intro">Opening, above the details</label>
+            <textarea id="intro"></textarea>
+          </div>
+          <div class="field">
+            <label for="notes">Closing, below the details</label>
+            <textarea id="notes"></textarea>
+          </div>
+          <div class="field">
+            <label for="signoff">Sign off</label>
+            <input type="text" id="signoff" />
+          </div>
+          <p class="hint">
+            Drop any of these into the wording and they are filled in for each
+            school:
+            <code
+              >{reg_no} {school} {team} {head_delegate} {supervisor} {delegates}
+              {realms} {dates} {venue} {contact}</code
+            >. Leave a blank line between paragraphs.
+          </p>
+          <p class="msg" id="msg"></p>
+        </div>
+      </div>
+
+      <div class="preview-wrap">
+        <div class="panel">
+          <h2>Preview</h2>
+          <p class="lede">
+            A made-up delegation, so you can see the shape of it. It updates as
+            you type.
+          </p>
+          <div class="tabs">
+            <button class="tab on" type="button" data-view="html">
+              As it looks
+            </button>
+            <button class="tab" type="button" data-view="text">
+              Plain text
+            </button>
+          </div>
+          <div class="subject-line">
+            <span>Subject</span><b id="previewSubject">...</b>
+          </div>
+          <iframe
+            id="preview"
+            title="Preview of the confirmation email"
+            sandbox=""
+          ></iframe>
+          <pre class="plain" id="previewText" hidden></pre>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      (function () {
+        const $ = (id) => document.getElementById(id);
+        const token = sessionStorage.getItem("rsic_admin_token") || "";
+        if (!token) {
+          $("gate").hidden = false;
+          return;
+        }
+        $("app").hidden = false;
+        $("saveBtn").hidden = false;
+        $("testBtn").hidden = false;
+
+        // The same Express app serves this page and the API, so a relative
+        // path is always right, on the live site and on any local port.
+        const request = async (path, options = {}) => {
+          const res = await fetch(path, {
+            ...options,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + token,
+              ...(options.headers || {}),
+            },
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.status === 401) {
+            sessionStorage.removeItem("rsic_admin_token");
+            throw new Error("Signed out. Sign in on the dashboard again.");
+          }
+          if (!res.ok) throw new Error(data.error || "That did not work.");
+          return data;
+        };
+
+        const say = (text, good) => {
+          const el = $("msg");
+          el.textContent = text || "";
+          el.className = "msg " + (good ? "good" : "bad");
+        };
+
+        let groups = [];
+        const boxes = new Map();
+
+        // The draft the page is showing, in the same shape the server stores.
+        const draft = () => ({
+          "email.confirm.enabled": $("enabled").checked ? "on" : "off",
+          "email.confirm.subject": $("subject").value,
+          "email.confirm.intro": $("intro").value,
+          "email.confirm.notes": $("notes").value,
+          "email.confirm.signoff": $("signoff").value,
+          "email.confirm.fields": [...boxes.entries()]
+            .filter(function (pair) {
+              return pair[1].checked;
+            })
+            .map(function (pair) {
+              return pair[0];
+            })
+            .join(","),
+        });
+
+        const buildGroups = (chosen) => {
+          const picked = new Set(chosen);
+          const wrap = $("groups");
+          wrap.replaceChildren();
+          groups.forEach((g) => {
+            const sec = document.createElement("div");
+            sec.className = "group";
+
+            const head = document.createElement("div");
+            head.className = "group-head";
+            const title = document.createElement("span");
+            title.className = "group-title";
+            title.textContent = g.title;
+            const toggle = document.createElement("button");
+            toggle.className = "linkish";
+            toggle.type = "button";
+            toggle.textContent = "all or none";
+            toggle.addEventListener("click", () => {
+              const ids = g.fields.map((f) => f[0]);
+              const allOn = ids.every((id) => boxes.get(id).checked);
+              ids.forEach((id) => (boxes.get(id).checked = !allOn));
+              schedulePreview();
+            });
+            head.append(title, toggle);
+            sec.append(head);
+
+            g.fields.forEach((f) => {
+              const l = document.createElement("label");
+              l.className = "check";
+              const box = document.createElement("input");
+              box.type = "checkbox";
+              box.checked = picked.has(f[0]);
+              box.addEventListener("change", schedulePreview);
+              const span = document.createElement("span");
+              span.textContent = f[1];
+              l.append(box, span);
+              sec.append(l);
+              boxes.set(f[0], box);
+            });
+
+            wrap.append(sec);
+          });
+        };
+
+        let timer = null;
+        const schedulePreview = () => {
+          clearTimeout(timer);
+          timer = setTimeout(refreshPreview, 350);
+        };
+
+        let view = "html";
+        let last = { html: "", text: "", subject: "" };
+
+        const paint = () => {
+          $("previewSubject").textContent = last.subject || "...";
+          $("preview").hidden = view !== "html";
+          $("previewText").hidden = view !== "text";
+          if (view === "html") $("preview").srcdoc = last.html;
+          else $("previewText").textContent = last.text;
+        };
+
+        const refreshPreview = async () => {
+          try {
+            last = await request("/api/admin/email-preview", {
+              method: "POST",
+              body: JSON.stringify({ draft: draft() }),
+            });
+            paint();
+          } catch (err) {
+            say(err.message, false);
+          }
+        };
+
+        document.querySelectorAll(".tab").forEach((t) =>
+          t.addEventListener("click", () => {
+            document
+              .querySelectorAll(".tab")
+              .forEach((x) => x.classList.toggle("on", x === t));
+            view = t.dataset.view;
+            paint();
+          }),
+        );
+
+        ["subject", "intro", "notes", "signoff"].forEach((id) =>
+          $(id).addEventListener("input", schedulePreview),
+        );
+        $("enabled").addEventListener("change", schedulePreview);
+
+        $("saveBtn").addEventListener("click", async () => {
+          $("saveBtn").disabled = true;
+          say("Saving...", true);
+          try {
+            await request("/api/content", {
+              method: "PATCH",
+              body: JSON.stringify({ updates: draft() }),
+            });
+            say("Saved. The next approval uses this.", true);
+          } catch (err) {
+            say(err.message, false);
+          }
+          $("saveBtn").disabled = false;
+        });
+
+        $("testBtn").addEventListener("click", async () => {
+          $("testBtn").disabled = true;
+          say("Sending...", true);
+          try {
+            const r = await request("/api/admin/email-test", {
+              method: "POST",
+              body: JSON.stringify({ draft: draft() }),
+            });
+            if (r.ok)
+              say("Sent to " + r.to.join(" and ") + ". Check that inbox.", true);
+            else say(r.error, false);
+          } catch (err) {
+            say(err.message, false);
+          }
+          $("testBtn").disabled = false;
+        });
+
+        (async () => {
+          try {
+            const cfg = await request("/api/admin/email-config");
+            groups = cfg.groups || [];
+            const v = cfg.values || {};
+            $("enabled").checked =
+              String(v["email.confirm.enabled"] || "on").toLowerCase() === "on";
+            $("subject").value = v["email.confirm.subject"] || "";
+            $("intro").value = v["email.confirm.intro"] || "";
+            $("notes").value = v["email.confirm.notes"] || "";
+            $("signoff").value = v["email.confirm.signoff"] || "";
+            buildGroups(cfg.fields || []);
+            if (cfg.mailUser)
+              $("testBtn").textContent = "Send a test to " + cfg.mailUser;
+            if (!cfg.mailReady)
+              say(
+                "Sending is not switched on yet: the Gmail App Password is still missing on the server. Everything here still saves, and the preview works.",
+                false,
+              );
+            await refreshPreview();
+          } catch (err) {
+            say(err.message, false);
+          }
+        })();
+      })();
+    </script>
+  </body>
+</html>
