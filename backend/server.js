@@ -826,15 +826,11 @@ app.use((err, _req, res, next) => {
   return next(err);
 });
 
+// mail says whether confirmation emails are set up, which is the one thing
+// worth being able to check without the admin password. The host's Node
+// version was reported here while that was in question and is Node 22.
 app.get("/api/health", (_req, res) =>
-  // node is the major version only, and it is here because the mail library
-  // needs Node 20 or newer: it is the one way to check what the host runs
-  // without putting the admin password into a script.
-  res.json({
-    ok: true,
-    node: "v" + process.versions.node.split(".")[0],
-    mail: mailConfigured(),
-  }),
+  res.json({ ok: true, mail: mailConfigured() }),
 );
 
 // ---------------------------------------------------------------- the website

@@ -20,6 +20,6 @@
     "nodemailer": "^10.1.1"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }

@@ -11,7 +11,7 @@
     "prestart": "node tools/stamp-assets.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
