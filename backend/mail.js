@@ -48,23 +48,34 @@ const getTransport = () => {
   return transport;
 };
 
-// The wording lives in site_content so it can be changed from the dashboard.
-// These are only the fallbacks, used before the rows are seeded or if the
-// database cannot be reached, so a confirmation still goes out either way.
-const DEFAULT_SUBJECT = "RSIC 2026: {school} is confirmed ({reg_no})";
+// ------------------------------------------------------------------ wording
+// Only the prose is editable from the dashboard. The tables of the
+// delegation's own details are built here, because a school's realms and
+// delegates have to be laid out rather than typed into a template.
+const DEFAULT_SUBJECT =
+  "RSIC 2026 registration confirmed: {school} ({reg_no})";
 
-const DEFAULT_BODY = [
-  "Hello {head_delegate},",
-  "{school} is confirmed for RSIC 2026. Your registration number is {reg_no}. Keep it somewhere safe, we will use it for everything from here.",
-  "Your realms:\n{realms}",
-  "Delegates: {delegates}\nSupervisor: {supervisor}",
-  "When: Friday 13 to Sunday 15 November 2026\nWhere: TCS Ravi",
-  "Bring the signed waiver of liability and the head delegate form with you. Both can be downloaded from https://cityrsic.com/register.",
-  "If anything above is wrong, reply to this email and we will fix it.",
+const DEFAULT_INTRO = [
+  "We have received your payment, and your delegation's place at RSIC 2026 is now confirmed.",
+  "Your registration number is {reg_no}. Please quote it in any correspondence with us, and keep it with you on the day.",
+  "The details we hold for your delegation are set out below. Please check them.",
+].join("\n\n");
+
+const DEFAULT_NOTES = [
+  "Please bring the signed waiver of liability and the head delegate form with you on the first day. Both can be downloaded from https://cityrsic.com/register.",
+  "If any of the details above are incorrect, reply to this email and we will correct them.",
 ].join("\n\n");
 
 const DEFAULT_SIGNOFF = "The RSIC team";
 
+const FALLBACK = {
+  dates: "Friday 13 to Sunday 15 November 2026",
+  venue: "The City School, Ravi Campus, Johar Town, Lahore",
+  contact: "raviscienceandinnovation@gmail.com",
+  map: "https://maps.app.goo.gl/rr4QBxRrdJW5JUn19",
+};
+
+// ------------------------------------------------------------------ helpers
 const escapeHtml = (s) =>
   String(s)
     .replace(/&/g, "&amp;")
@@ -73,36 +84,13 @@ const escapeHtml = (s) =>
     .replace(/"/g, "&quot;");
 
 // A carriage return or line feed in a value that lands in the subject is how a
-// header gets injected, and the school name and both people's names are typed
+// header gets injected, and the school name and every person's name are typed
 // into the public form. They are flattened here rather than trusting the mail
-// library to do it. The realm list is built from our own keys, so it keeps the
-// line breaks that make it a list.
+// library to do it.
 const oneLine = (s) =>
   String(s == null ? "" : s)
     .replace(/[\r\n\t\f\v\u0000-\u0008\u000b-\u001f\u007f]+/g, " ")
     .trim();
-
-// The values that go into the template. The school name, the head delegate's
-// name and the supervisor's all come straight off the public form, so every
-// one of them is escaped before it reaches the HTML version.
-const valuesFor = (row, content) => {
-  const realmName = (k) => (content && content["realm." + k + ".name"]) || k;
-  const head = row.head_delegate || {};
-  const realms = Array.isArray(row.realms) ? row.realms : [];
-  return {
-    reg_no:
-      row.reg_no != null ? String(row.reg_no).padStart(3, "0") : "#" + row.id,
-    school: oneLine(row.school) || "Your school",
-    team: oneLine(row.team_name),
-    head_delegate: oneLine(head.name) || "there",
-    supervisor: oneLine(row.supervisor_name),
-    delegates: row.delegates != null ? String(row.delegates) : "",
-    realms: realms.map((k) => "- " + oneLine(realmName(k))).join("\n"),
-    venue: "TCS Ravi",
-    dates: "Friday 13 to Sunday 15 November 2026",
-    contact: MAIL_USER || "raviscienceandinnovation@gmail.com",
-  };
-};
 
 // A typo in a placeholder is left standing rather than quietly dropped, so it
 // shows up the first time the owner sends themselves a test instead of going
@@ -112,58 +100,405 @@ const fill = (template, values) =>
     Object.prototype.hasOwnProperty.call(values, name) ? values[name] : whole,
   );
 
-// Email clients are the one place where inline styles and tables still win, so
+// Only http and https ever reach an href, so a dashboard field cannot put a
+// javascript: or data: URL into an email. Same rule the public pages use.
+const safeUrl = (u) => {
+  const s = oneLine(u);
+  return /^https?:\/\/[^\s"<>]+$/i.test(s) ? s : "";
+};
+
+const setting = (content, key, fallback) =>
+  oneLine((content && content[key]) || "") || fallback;
+
+// ------------------------------------------------------------------ the data
+const detailsOf = (row, content) => {
+  const realmName = (k) =>
+    oneLine((content && content["realm." + k + ".name"]) || k);
+  const head = row.head_delegate || {};
+  const realms = Array.isArray(row.realms) ? row.realms : [];
+  const list = Array.isArray(row.delegate_list) ? row.delegate_list : [];
+  const total = row.delegates != null ? Number(row.delegates) : null;
+
+  return {
+    regNo:
+      row.reg_no != null ? String(row.reg_no).padStart(3, "0") : "#" + row.id,
+    school: oneLine(row.school),
+    team: oneLine(row.team_name),
+    total: total,
+    // The head delegate counts toward the total, and delegate_list holds the
+    // others, so the two together are the whole delegation.
+    others: list.map((d) => oneLine(d && d.name)).filter(Boolean),
+    realms: realms.map(realmName),
+    supervisor: {
+      name: oneLine(row.supervisor_name),
+      email: oneLine(row.supervisor_email),
+      phone: oneLine(row.supervisor_phone),
+    },
+    head: {
+      name: oneLine(head.name),
+      email: oneLine(head.email),
+      phone: oneLine(head.phone),
+    },
+    dates: setting(content, "event.dates", FALLBACK.dates),
+    venue: setting(content, "event.venue", FALLBACK.venue),
+    contact: setting(content, "contact.email", FALLBACK.contact),
+    map: safeUrl(setting(content, "event.map_url", FALLBACK.map)),
+  };
+};
+
+// ------------------------------------------------------------- plain text
+const textVersion = (d, intro, notes, signoff) => {
+  const out = [];
+  const rule = "------------------------------------------------------------";
+  const section = (title) => {
+    out.push("", rule, title.toUpperCase(), rule);
+  };
+  const pair = (label, value) => {
+    if (value) out.push("  " + (label + ":").padEnd(22) + value);
+  };
+
+  out.push("RSIC 2026");
+  out.push("Different minds. One universe.");
+  out.push("");
+  out.push("REGISTRATION CONFIRMED");
+  out.push("Registration number: " + d.regNo);
+  out.push("");
+  out.push("Dear " + (d.head.name || "delegate") + ",");
+  out.push("");
+  out.push(intro);
+
+  section("Delegation");
+  pair("Registration number", d.regNo);
+  pair("School", d.school);
+  pair("Team name", d.team);
+  if (d.total != null) pair("Delegates", String(d.total));
+
+  if (d.realms.length) {
+    section("Realms entered (" + d.realms.length + ")");
+    d.realms.forEach((r, i) => out.push("  " + (i + 1) + ". " + r));
+  }
+
+  section("Supervisor");
+  pair("Name", d.supervisor.name);
+  pair("Email", d.supervisor.email);
+  pair("Phone", d.supervisor.phone);
+
+  section("Head delegate");
+  pair("Name", d.head.name);
+  pair("Email", d.head.email);
+  pair("Phone", d.head.phone);
+
+  if (d.others.length) {
+    section("Delegates (" + d.others.length + ")");
+    d.others.forEach((n, i) => out.push("  " + (i + 1) + ". " + n));
+    out.push("");
+    out.push("  The head delegate is listed separately above.");
+  }
+
+  section("The event");
+  pair("Dates", d.dates);
+  pair("Venue", d.venue);
+  if (d.map) pair("Map", d.map);
+
+  section("Contact");
+  pair("Email", d.contact);
+
+  out.push("", rule, "");
+  out.push(notes);
+  out.push("");
+  out.push(signoff);
+  out.push("");
+  out.push("https://cityrsic.com");
+  return out.join("\n");
+};
+
+// ------------------------------------------------------------------- html
+// Email clients are the one place where tables and inline styles still win, so
 // this is deliberately plain: the site's navy and pink, a serif heading, and
 // nothing that depends on a stylesheet surviving the trip.
-const htmlFor = (body, signoff, values) => {
-  const paragraphs = body
+const C = {
+  page: "#040b1a",
+  card: "#0b1d3b",
+  raised: "#10264a",
+  text: "#f3eee8",
+  soft: "#a8b5c8",
+  pink: "#D0768F",
+  line: "rgba(243,238,232,.14)",
+};
+const SANS = "Helvetica,Arial,sans-serif";
+const SERIF = "Georgia,'Times New Roman',serif";
+
+const paras = (text) =>
+  String(text)
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean)
     .map(
       (p) =>
-        '<p style="margin:0 0 18px;line-height:1.65;color:#f3eee8">' +
+        '<p style="margin:0 0 14px;font-family:' +
+        SANS +
+        ";font-size:15px;line-height:1.7;color:" +
+        C.text +
+        '">' +
         escapeHtml(p).replace(/\n/g, "<br />") +
         "</p>",
     )
     .join("");
 
-  return [
-    '<!doctype html><html><body style="margin:0;padding:0;background:#040b1a">',
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#040b1a;padding:28px 12px">',
-    '<tr><td align="center">',
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0b1d3b;border-radius:18px;padding:32px">',
-    "<tr><td style=\"font-family:Georgia,'Times New Roman',serif;font-size:26px;color:#f3eee8;padding-bottom:4px\">",
-    'RSIC<span style="color:#D0768F">.</span>',
-    "</td></tr>",
-    '<tr><td style="font-family:Georgia,serif;font-style:italic;font-size:15px;color:#D0768F;padding-bottom:22px">',
-    "Different minds. One universe.",
-    "</td></tr>",
-    '<tr><td style="font-family:Helvetica,Arial,sans-serif;font-size:15px">',
-    paragraphs,
-    '<p style="margin:26px 0 0;font-family:Georgia,serif;font-style:italic;font-size:16px;color:#D0768F">',
-    escapeHtml(signoff),
-    "</p>",
-    "</td></tr>",
-    '<tr><td style="padding-top:26px;border-top:1px solid rgba(243,238,232,.14);font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#a8b5c8">',
-    "Registration " +
-      escapeHtml(values.reg_no) +
-      ' &middot; <a href="https://cityrsic.com" style="color:#D0768F;text-decoration:none">cityrsic.com</a>',
-    "</td></tr>",
-    "</table></td></tr></table></body></html>",
-  ].join("");
+const heading = (title) =>
+  '<tr><td style="padding:26px 0 10px"><div style="font-family:' +
+  SANS +
+  ";font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:" +
+  C.pink +
+  ';font-weight:700">' +
+  escapeHtml(title) +
+  '</div><div style="height:1px;background:' +
+  C.line +
+  ';margin-top:9px"></div></td></tr>';
+
+// A label and value on one row. Tables are how a formal email stays aligned in
+// Outlook as well as Gmail.
+const rows = (pairsList) => {
+  const body = pairsList
+    .filter((p) => p[1])
+    .map(
+      (p) =>
+        '<tr><td style="padding:5px 14px 5px 0;font-family:' +
+        SANS +
+        ";font-size:13px;color:" +
+        C.soft +
+        ';white-space:nowrap;vertical-align:top;width:1%">' +
+        escapeHtml(p[0]) +
+        '</td><td style="padding:5px 0;font-family:' +
+        SANS +
+        ";font-size:14px;color:" +
+        C.text +
+        ';vertical-align:top">' +
+        (p[2] ? p[2] : escapeHtml(p[1])) +
+        "</td></tr>",
+    )
+    .join("");
+  return body
+    ? '<tr><td><table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
+        body +
+        "</table></td></tr>"
+    : "";
 };
 
-// Who hears about an approval: the head delegate and the supervisor, as the
-// owner asked. Either address can be missing on an older row, so whoever is
-// there is written to and the result says exactly who was reached.
-//
+const numbered = (items, note) => {
+  if (!items.length) return "";
+  const li = items
+    .map(
+      (t, i) =>
+        '<tr><td style="padding:4px 10px 4px 0;font-family:' +
+        SANS +
+        ";font-size:13px;color:" +
+        C.pink +
+        ';vertical-align:top;width:1%">' +
+        String(i + 1).padStart(2, "0") +
+        '</td><td style="padding:4px 0;font-family:' +
+        SANS +
+        ";font-size:14px;color:" +
+        C.text +
+        '">' +
+        escapeHtml(t) +
+        "</td></tr>",
+    )
+    .join("");
+  const tail = note
+    ? '<p style="margin:10px 0 0;font-family:' +
+      SANS +
+      ";font-size:12px;color:" +
+      C.soft +
+      '">' +
+      escapeHtml(note) +
+      "</p>"
+    : "";
+  return (
+    '<tr><td><table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
+    li +
+    "</table>" +
+    tail +
+    "</td></tr>"
+  );
+};
+
+const htmlVersion = (d, intro, notes, signoff) => {
+  const mapLink = d.map
+    ? '<a href="' +
+      escapeHtml(d.map) +
+      '" style="color:' +
+      C.pink +
+      ';text-decoration:none;font-weight:700">Open in Google Maps</a>'
+    : "";
+
+  const parts = [
+    '<!doctype html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>RSIC 2026 registration confirmed</title></head>',
+    '<body style="margin:0;padding:0;background:' +
+      C.page +
+      ';-webkit-text-size-adjust:100%">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' +
+      C.page +
+      ';padding:28px 12px">',
+    '<tr><td align="center">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:' +
+      C.card +
+      ';border-radius:18px;padding:34px 30px">',
+
+    // masthead
+    '<tr><td style="font-family:' +
+      SERIF +
+      ";font-size:27px;color:" +
+      C.text +
+      '">RSIC<span style="color:' +
+      C.pink +
+      '">.</span></td></tr>',
+    '<tr><td style="font-family:' +
+      SERIF +
+      ";font-style:italic;font-size:14px;color:" +
+      C.pink +
+      ';padding-top:2px">Different minds. One universe.</td></tr>',
+    '<tr><td style="padding-top:20px"><div style="height:1px;background:' +
+      C.line +
+      '"></div></td></tr>',
+
+    // title and the number, which is the thing they will look for
+    '<tr><td style="padding-top:24px;font-family:' +
+      SERIF +
+      ";font-size:22px;color:" +
+      C.text +
+      '">Registration confirmed</td></tr>',
+    '<tr><td style="padding-top:14px"><table role="presentation" cellpadding="0" cellspacing="0" style="background:' +
+      C.raised +
+      ';border-radius:12px"><tr><td style="padding:12px 18px;font-family:' +
+      SANS +
+      ";font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:" +
+      C.soft +
+      '">Registration number<div style="font-family:' +
+      SERIF +
+      ";font-size:28px;color:" +
+      C.pink +
+      ';margin-top:4px">' +
+      escapeHtml(d.regNo) +
+      "</div></td></tr></table></td></tr>",
+
+    // salutation and the editable opening
+    '<tr><td style="padding-top:24px;font-family:' +
+      SANS +
+      ";font-size:15px;color:" +
+      C.text +
+      ';font-weight:700">Dear ' +
+      escapeHtml(d.head.name || "delegate") +
+      ",</td></tr>",
+    '<tr><td style="padding-top:12px">' + paras(intro) + "</td></tr>",
+
+    heading("Delegation"),
+    // The registration number is not repeated here: it has its own box above
+    // and the footer carries it again.
+    rows([
+      ["School", d.school],
+      ["Team name", d.team],
+      ["Delegates", d.total != null ? String(d.total) : ""],
+    ]),
+  ];
+
+  if (d.realms.length) {
+    parts.push(heading("Realms entered (" + d.realms.length + ")"));
+    parts.push(numbered(d.realms, ""));
+  }
+
+  parts.push(heading("Supervisor"));
+  parts.push(
+    rows([
+      ["Name", d.supervisor.name],
+      ["Email", d.supervisor.email],
+      ["Phone", d.supervisor.phone],
+    ]),
+  );
+
+  parts.push(heading("Head delegate"));
+  parts.push(
+    rows([
+      ["Name", d.head.name],
+      ["Email", d.head.email],
+      ["Phone", d.head.phone],
+    ]),
+  );
+
+  if (d.others.length) {
+    parts.push(heading("Delegates (" + d.others.length + ")"));
+    parts.push(
+      numbered(d.others, "The head delegate is listed separately above."),
+    );
+  }
+
+  parts.push(heading("The event"));
+  parts.push(
+    rows([
+      ["Dates", d.dates],
+      ["Venue", d.venue],
+      ["Map", d.map ? "link" : "", mapLink],
+    ]),
+  );
+
+  parts.push(heading("Contact"));
+  parts.push(
+    rows([
+      [
+        "Email",
+        d.contact,
+        '<a href="mailto:' +
+          escapeHtml(d.contact) +
+          '" style="color:' +
+          C.pink +
+          ';text-decoration:none">' +
+          escapeHtml(d.contact) +
+          "</a>",
+      ],
+    ]),
+  );
+
+  parts.push(
+    '<tr><td style="padding-top:26px"><div style="height:1px;background:' +
+      C.line +
+      '"></div></td></tr>',
+    '<tr><td style="padding-top:22px">' + paras(notes) + "</td></tr>",
+    '<tr><td style="padding-top:14px;font-family:' +
+      SERIF +
+      ";font-style:italic;font-size:17px;color:" +
+      C.pink +
+      '">' +
+      escapeHtml(signoff) +
+      "</td></tr>",
+    '<tr><td style="padding-top:26px"><div style="height:1px;background:' +
+      C.line +
+      '"></div></td></tr>',
+    '<tr><td style="padding-top:16px;font-family:' +
+      SANS +
+      ";font-size:12px;color:" +
+      C.soft +
+      '">Registration ' +
+      escapeHtml(d.regNo) +
+      ' &middot; <a href="https://cityrsic.com" style="color:' +
+      C.pink +
+      ';text-decoration:none">cityrsic.com</a></td></tr>',
+    "</table></td></tr></table></body></html>",
+  );
+
+  return parts.join("");
+};
+
+// ------------------------------------------------------------- recipients
 // These two addresses are typed into the public registration form, so they are
 // held to a deliberately narrow shape here as well as at registration. The
 // parentheses, commas, semicolons and angle brackets are the characters the
 // address-parser advisories turn on, and no real address needs them.
-const PLAIN_ADDRESS = /^[^\s@(),;:<>\\"]+@[^\s@(),;:<>\\".]+(\.[^\s@(),;:<>\\".]+)+$/;
+const PLAIN_ADDRESS =
+  /^[^\s@(),;:<>\\"]+@[^\s@(),;:<>\\".]+(\.[^\s@(),;:<>\\".]+)+$/;
 
+// Who hears about an approval: the head delegate and the supervisor, as the
+// owner asked. Either address can be missing on an older row, so whoever is
+// there is written to and the result says exactly who was reached.
 const recipientsFor = (row) => {
   const head = row.head_delegate || {};
   const seen = new Set();
@@ -178,6 +513,7 @@ const recipientsFor = (row) => {
     });
 };
 
+// ------------------------------------------------------------------- send
 const sendConfirmation = async (row, content) => {
   const to = recipientsFor(row);
   if (!to.length)
@@ -213,13 +549,28 @@ const sendConfirmation = async (row, content) => {
       error: "Confirmation emails are switched off in the dashboard.",
     };
 
-  const values = valuesFor(row, c);
+  const d = detailsOf(row, c);
+  // The placeholders the editable prose can use.
+  const values = {
+    reg_no: d.regNo,
+    school: d.school || "your school",
+    team: d.team,
+    head_delegate: d.head.name || "delegate",
+    supervisor: d.supervisor.name,
+    delegates: d.total != null ? String(d.total) : "",
+    realms: d.realms.join(", "),
+    venue: d.venue,
+    dates: d.dates,
+    contact: d.contact,
+  };
+
   // Flattened again after filling, which also covers a line break pasted into
   // the subject field in the dashboard.
   const subject = oneLine(
     fill(c["email.confirm.subject"] || DEFAULT_SUBJECT, values),
   );
-  const body = fill(c["email.confirm.body"] || DEFAULT_BODY, values);
+  const intro = fill(c["email.confirm.intro"] || DEFAULT_INTRO, values);
+  const notes = fill(c["email.confirm.notes"] || DEFAULT_NOTES, values);
   const signoff = fill(c["email.confirm.signoff"] || DEFAULT_SIGNOFF, values);
 
   try {
@@ -227,8 +578,8 @@ const sendConfirmation = async (row, content) => {
       from: '"' + MAIL_FROM_NAME + '" <' + MAIL_USER + ">",
       to,
       subject,
-      text: body + "\n\n" + signoff + "\n\nhttps://cityrsic.com",
-      html: htmlFor(body, signoff, values),
+      text: textVersion(d, intro, notes, signoff),
+      html: htmlVersion(d, intro, notes, signoff),
     });
     return { ok: true, to, id: info.messageId };
   } catch (err) {
