@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /admindashboard
+Disallow: /regidash
 Disallow: /api/
 
 Sitemap: https://cityrsic.com/sitemap.xml

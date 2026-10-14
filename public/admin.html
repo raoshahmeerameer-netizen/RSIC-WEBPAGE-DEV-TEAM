@@ -718,7 +718,43 @@
           ).replace(/\/$/, "") + path;
 
         const $ = (id) => document.getElementById(id);
-        const TOKEN_KEY = "rsic_admin_token";
+        // /regidash is the registration team's copy of this page. It signs in
+        // with its own password and the server only lets that token review,
+        // approve, resend, export and edit a handful of settings. Hiding the
+        // rest here is tidiness; the server is what actually refuses it.
+        // Elements are hidden, never removed, because later code writes to them.
+        const REGI = /^\/regidash\/?$/.test(location.pathname);
+        const TOKEN_KEY = REGI ? "rsic_regi_token" : "rsic_admin_token";
+        const LOGIN_URL = REGI ? "/api/regi/login" : "/api/admin/login";
+        const CHECK_URL = REGI ? "/api/regi/check" : "/api/admin/check";
+        const CONTENT_URL = REGI ? "/api/regi/content" : "/api/content";
+        const CONTENT_ALL_URL = REGI ? "/api/regi/content" : "/api/content/all";
+
+        if (REGI) {
+          document.title = "Registration Dashboard | RSIC 2026";
+          document
+            .querySelectorAll('.site-nav a[href^="/admindashboard"]')
+            .forEach((a) => (a.style.display = "none"));
+          $("authForm").querySelector("h1").innerHTML =
+            "Registration <em>team.</em>";
+          document.querySelector(".page-head .page-title").innerHTML =
+            "Registration <em>dashboard.</em>";
+          document.querySelector(".page-head .lede").textContent =
+            "Review registrations, approve them and resend confirmations, export the list, and keep the fees and registration notes up to date.";
+          $("regToggle").style.display = "none";
+          ["panel-guides", "panel-forms", "panel-logos"].forEach(
+            (id) => ($(id).hidden = true),
+          );
+          document.querySelectorAll("#panelTabs .panel-tab").forEach((b) => {
+            const p = b.dataset.panels;
+            if (/panel-(guides|forms|logos)/.test(p)) b.style.display = "none";
+            if (p === "panel-text") b.textContent = "Registration settings";
+          });
+          const textHead = $("panel-text").querySelector(".section-head");
+          textHead.querySelector("h2").innerHTML = "Fees and <em>notes.</em>";
+          textHead.querySelector("p:not(.label)").textContent =
+            "The fees, the registration messages and the registration contact. Edit and press Save; the register page updates straight away.";
+        }
         let token = sessionStorage.getItem(TOKEN_KEY) || "";
         let rows = [];
         let content = [];
@@ -767,7 +803,7 @@
           const msg = $("authMsg");
           say(msg, "Checking…", true);
           try {
-            const res = await fetch(api("/api/admin/login"), {
+            const res = await fetch(api(LOGIN_URL), {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ password: $("adminPass").value }),
@@ -955,8 +991,8 @@
                 again.addEventListener("click", () =>
                   setStatus(row.id, "Confirmed", again, true),
                 );
-                wrap.append(toggle, again, details, del);
-              } else wrap.append(toggle, details, del);
+                wrap.append(toggle, again, details, ...(REGI ? [] : [del]));
+              } else wrap.append(toggle, details, ...(REGI ? [] : [del]));
               actions.append(wrap);
               tr.append(num, who, realm, st, actions);
               return tr;
@@ -2146,7 +2182,7 @@
         // ---------------------------------------------------------- editor
         async function loadContent() {
           try {
-            const data = await request("/api/content/all");
+            const data = await request(CONTENT_ALL_URL);
             content = data.content || [];
             edits = {};
             renderEditor();
@@ -2278,7 +2314,7 @@
           $("cmsSave").disabled = true;
           say($("cmsMsg"), "Saving…", true);
           try {
-            const data = await request("/api/content", {
+            const data = await request(CONTENT_URL, {
               method: "PATCH",
               body: JSON.stringify({ updates: edits }),
             });
@@ -2307,7 +2343,7 @@
         (async () => {
           if (!token) return;
           try {
-            await request("/api/admin/check");
+            await request(CHECK_URL);
             showApp();
             loadEverything();
           } catch (err) {

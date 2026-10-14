@@ -21,6 +21,7 @@ const {
   SUPABASE_URL,
   SUPABASE_KEY,
   ADMIN_PASSWORD,
+  REGISTRATION_PASSWORD,
   ALLOWED_ORIGINS,
   PORT = 5000,
 } = process.env;
@@ -136,12 +137,19 @@ const putFile = async (bucket, path, file) => {
 
 // ---------------------------------------------------------------- admin sessions
 // Tokens live in memory, so restarting the server signs every admin out.
+// Each token carries a role. "admin" is the owner's dashboard and can do
+// everything; "registration" is the registration team's /regidash, which can
+// only review registrations, approve and resend, export, and change the few
+// settings in REGI_KEYS. The role is fixed by which password signed in.
 const SESSION_HOURS = 12;
 const sessions = new Map();
 
-const newSession = () => {
+const newSession = (role) => {
   const token = crypto.randomBytes(32).toString("hex");
-  sessions.set(token, Date.now() + SESSION_HOURS * 3600 * 1000);
+  sessions.set(token, {
+    expires: Date.now() + SESSION_HOURS * 3600 * 1000,
+    role,
+  });
   return token;
 };
 
@@ -151,15 +159,28 @@ const sameString = (a, b) => {
   return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
 };
 
-const requireAdmin = (req, res, next) => {
+const sessionOf = (req) => {
   const token = (req.headers.authorization || "").replace(/^Bearer /, "");
-  const expires = sessions.get(token);
-  if (!expires || expires < Date.now()) {
+  const s = sessions.get(token);
+  if (!s || s.expires < Date.now()) {
     sessions.delete(token);
-    return res.status(401).json({ error: "Not signed in." });
+    return null;
   }
+  return s;
+};
+
+const requireRole = (...roles) => (req, res, next) => {
+  const s = sessionOf(req);
+  if (!s) return res.status(401).json({ error: "Not signed in." });
+  if (!roles.includes(s.role))
+    return res.status(403).json({ error: "Not allowed from this dashboard." });
+  req.role = s.role;
   next();
 };
+
+const requireAdmin = requireRole("admin");
+// The owner, or the registration team.
+const requireStaff = requireRole("admin", "registration");
 
 // Slow down password guessing: 10 tries per address per 15 minutes.
 const loginTries = new Map();
@@ -182,15 +203,36 @@ app.post("/api/admin/login", (req, res) => {
       .json({ error: "Too many attempts. Wait 15 minutes." });
   if (!sameString((req.body && req.body.password) || "", ADMIN_PASSWORD))
     return res.status(401).json({ error: "Wrong password." });
-  res.json({ token: newSession(), hours: SESSION_HOURS });
+  res.json({ token: newSession("admin"), hours: SESSION_HOURS });
 });
 
-app.post("/api/admin/logout", requireAdmin, (req, res) => {
+// The registration team signs in with their own password. Without one set on
+// the server the door stays shut rather than falling back to anything.
+app.post("/api/regi/login", (req, res) => {
+  if (tooManyTries(req.ip))
+    return res
+      .status(429)
+      .json({ error: "Too many attempts. Wait 15 minutes." });
+  if (!REGISTRATION_PASSWORD)
+    return res
+      .status(503)
+      .json({ error: "The registration dashboard is not set up yet." });
+  if (
+    !sameString((req.body && req.body.password) || "", REGISTRATION_PASSWORD)
+  )
+    return res.status(401).json({ error: "Wrong password." });
+  res.json({ token: newSession("registration"), hours: SESSION_HOURS });
+});
+
+app.post("/api/admin/logout", requireStaff, (req, res) => {
   sessions.delete((req.headers.authorization || "").replace(/^Bearer /, ""));
   res.json({ ok: true });
 });
 
 app.get("/api/admin/check", requireAdmin, (_req, res) => res.json({ ok: true }));
+app.get("/api/regi/check", requireStaff, (req, res) =>
+  res.json({ ok: true, role: req.role }),
+);
 
 // ---------------------------------------------------------------- site content
 let contentCache = { at: 0, map: {} };
@@ -283,6 +325,56 @@ app.patch("/api/content", requireAdmin, async (req, res) => {
       .from("site_content")
       // the longest real value on the site is under 500 characters
       .update({ value: String(value).slice(0, 8000) })
+      .eq("key", key);
+    if (error) return res.status(500).json({ error: error.message });
+  }
+  await loadContent(true);
+  res.json({ ok: true, updated: entries.length });
+});
+
+// ------------------------------------------- the registration team's settings
+// The only site settings /regidash may change: the fees, the registration
+// messages and the registration contact. Not the open/closed switch, the realm
+// and delegate limits, the email wording or any page text. registration.open
+// is sent so the page can show whether registration is open, never written.
+const REGI_KEYS = [
+  "fee.early_bird",
+  "fee.normal",
+  "fee.delegation",
+  "event.registration_opens",
+  "registration.open_note",
+  "registration.closed_note",
+  "registration.realms_note",
+  "contact.registration.name",
+  "contact.registration.role",
+  "contact.registration.phone",
+];
+
+app.get("/api/regi/content", requireStaff, async (_req, res) => {
+  const { data, error } = await supabase
+    .from("site_content")
+    .select("*")
+    .in("key", [...REGI_KEYS, "registration.open"])
+    .order("category")
+    .order("position");
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ content: data });
+});
+
+app.patch("/api/regi/content", requireStaff, async (req, res) => {
+  const updates = req.body && req.body.updates;
+  if (!updates || typeof updates !== "object")
+    return res.status(400).json({ error: "Nothing to update." });
+  const entries = Object.entries(updates);
+  const refused = entries.filter(([key]) => !REGI_KEYS.includes(key));
+  if (refused.length)
+    return res
+      .status(403)
+      .json({ error: "Not allowed from this dashboard: " + refused[0][0] });
+  for (const [key, value] of entries) {
+    const { error } = await supabase
+      .from("site_content")
+      .update({ value: String(value).slice(0, 2000) })
       .eq("key", key);
     if (error) return res.status(500).json({ error: error.message });
   }
@@ -444,7 +536,7 @@ setInterval(() => {
   const now = Date.now();
   for (const [k, v] of loginTries) if (v.until < now) loginTries.delete(k);
   for (const [k, v] of postTries) if (v.until < now) postTries.delete(k);
-  for (const [t, expires] of sessions) if (expires < now) sessions.delete(t);
+  for (const [t, s] of sessions) if (s.expires < now) sessions.delete(t);
 }, 6e5).unref();
 
 app.post("/api/register", upload.any(), async (req, res) => {
@@ -692,7 +784,7 @@ app.post("/api/register", upload.any(), async (req, res) => {
 });
 
 // ---------------------------------------------------------------- admin data
-app.get("/api/registrations", requireAdmin, async (_req, res) => {
+app.get("/api/registrations", requireStaff, async (_req, res) => {
   const { data, error } = await supabase
     .from("registrations")
     .select("*")
@@ -701,7 +793,7 @@ app.get("/api/registrations", requireAdmin, async (_req, res) => {
   res.json({ success: true, data });
 });
 
-app.patch("/api/registrations/:id", requireAdmin, async (req, res) => {
+app.patch("/api/registrations/:id", requireStaff, async (req, res) => {
   const status = req.body && req.body.status;
   const resend = Boolean(req.body && req.body.resend);
   if (!["Pending", "Confirmed"].includes(status))
@@ -789,7 +881,7 @@ app.delete("/api/registrations/:id", requireAdmin, async (req, res) => {
 // Registration files are in a PRIVATE bucket. There is no public URL for
 // them. An admin gets a link that works for 60 seconds and nobody else can
 // reach them at all.
-app.get("/api/admin/file", requireAdmin, async (req, res) => {
+app.get("/api/admin/file", requireStaff, async (req, res) => {
   const path = String(req.query.path || "");
   // only ever inside the bucket, never a traversal or an absolute path
   if (!/^[0-9a-f-]{36}\/[a-z0-9-]+\.(jpg|png|webp|pdf)$/i.test(path))
@@ -990,6 +1082,11 @@ app.get("/admindashboard/advanced", (_req, res) =>
 );
 app.get("/admindashboard/email", (_req, res) =>
   sendPage(res, "admin-email.html"),
+);
+// The registration team's dashboard: the same page as the owner's, run in a
+// narrower mode. What it may do is decided by the server, not by the page.
+app.get(["/regidash", "/regidash/"], (_req, res) =>
+  sendPage(res, "admin.html"),
 );
 app.get(["/admin", "/admin.html", "/admindashboard.html"], (_req, res) =>
   res.redirect(301, "/admindashboard"),
