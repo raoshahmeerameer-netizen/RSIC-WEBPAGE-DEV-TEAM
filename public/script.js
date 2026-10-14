@@ -1505,40 +1505,35 @@ if (regForm) {
     return copyByCommand(text);
   };
 
-  // a short word in place of the address, then back again
-  const flash = (el, word) => {
-    if (el.dataset.flashing) return;
-    const was = el.textContent;
-    el.dataset.flashing = "yes";
-    el.textContent = word;
-    el.classList.add("mail-copied");
-    setTimeout(() => {
-      el.textContent = was;
-      el.classList.remove("mail-copied");
-      delete el.dataset.flashing;
-    }, 1600);
-  };
-
   mails.forEach((a) => {
     const address = a.getAttribute("href").replace(/^mailto:/i, "").trim();
     if (!address) return;
 
-    // the element holding the words, so the flash does not wipe an icon
+    // the element holding the words, so selecting them skips the icon
     const label =
       [...a.children].find((c) => c.textContent.trim() === address) || a;
 
-    // The default is deliberately not prevented: a visitor who does have a
-    // mail client still gets it, and everyone else still gets the address.
-    a.addEventListener("click", async () => {
-      const ok = await copy(address);
-      // Always say something. If the clipboard is refused the address is
-      // selected instead, which on its own is far too quiet to notice.
-      if (!ok) selectText(label);
-      flash(label, ok ? "Copied" : "Copy it from here");
+    // Clicking the address opens a Gmail compose window already addressed to
+    // us, so a visitor can actually write the email rather than being handed
+    // the address and left to do the rest themselves. The href stays a
+    // mailto:, so the link still means what it says, a right-click can still
+    // copy the address, and anything without JavaScript behaves as before.
+    a.addEventListener("click", (e) => {
+      // let a modified click do its usual thing (new tab, download, etc.)
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      e.preventDefault();
+      const compose =
+        "https://mail.google.com/mail/?view=cm&fs=1&to=" +
+        encodeURIComponent(address);
+      const win = window.open(compose, "_blank", "noopener,noreferrer");
+      // A popup blocker returns null. Fall back to the mail client the link
+      // always pointed at, so the click is never swallowed.
+      if (!win) window.location.href = a.getAttribute("href");
     });
 
-    // The footer address sits in a tight row of icons, so it gets the click
-    // behaviour only. Elsewhere there is room for a button as well.
+    // The footer address sits in a tight row of icons, so it gets the compose
+    // click only. Elsewhere there is room for a Copy button beside it, for
+    // anyone who would rather paste the address somewhere else.
     if (a.closest(".site-foot")) return;
     const btn = document.createElement("button");
     btn.type = "button";
