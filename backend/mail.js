@@ -23,6 +23,9 @@ const {
   MAIL_USER,
   MAIL_APP_PASSWORD,
   MAIL_FROM_NAME = "R.S.I.C",
+  // Some hosts block outbound 465. If that turns out to be the case, setting
+  // MAIL_PORT to 587 switches to STARTTLS with no code change.
+  MAIL_PORT = "465",
 } = process.env;
 
 const mailConfigured = () =>
@@ -33,8 +36,8 @@ const getTransport = () => {
   if (!transport)
     transport = nodemailer.createTransport({
       host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
+      port: Number(MAIL_PORT) || 465,
+      secure: Number(MAIL_PORT) !== 587,
       auth: {
         user: MAIL_USER,
         // Google shows an App Password as four groups of four, and it gets
