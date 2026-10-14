@@ -49,9 +49,13 @@ const getTransport = () => {
       secure: Number(MAIL_PORT) !== 587,
       auth: {
         user: MAIL_USER,
-        // Google shows an App Password as four groups of four, and it gets
-        // pasted that way more often than not. The spaces are not part of it.
-        pass: String(MAIL_APP_PASSWORD || "").replace(/\s+/g, ""),
+        // Google shows an App Password as four groups of four and it gets
+        // pasted that way more often than not, where the spaces are not part
+        // of it. Only Gmail, though: any other mailbox has an ordinary
+        // password, and a space in one is a real character to send as typed.
+        pass: /(^|\.)gmail\.com$/i.test(MAIL_HOST)
+          ? String(MAIL_APP_PASSWORD || "").replace(/\s+/g, "")
+          : String(MAIL_APP_PASSWORD || ""),
       },
     });
   return transport;
