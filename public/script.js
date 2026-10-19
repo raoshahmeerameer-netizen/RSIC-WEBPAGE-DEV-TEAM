@@ -68,9 +68,11 @@
         if (cell.textContent === text) return;
         cell.textContent = text;
         if (started && !reduce) {
-          cell.classList.remove("tick");
-          void cell.offsetWidth;
-          cell.classList.add("tick");
+          // restart the roll by swapping between two identical animations,
+          // which needs no layout, instead of forcing one to re-trigger it
+          const odd = cell.classList.contains("tick");
+          cell.classList.toggle("tick", !odd);
+          cell.classList.toggle("tick2", odd);
         }
       });
       started = true;
@@ -386,7 +388,9 @@
       const focus = () => {
         queued = false;
         const line = innerHeight * 0.48;
-        for (const g of groups) {
+        // measure every group first, then change classes, so one group's
+        // writes never force the next group's reads to redo layout
+        const picks = groups.map((g) => {
           let best = null,
             bestD = Infinity;
           for (const el of g) {
@@ -398,10 +402,13 @@
               best = el;
             }
           }
+          return best;
+        });
+        groups.forEach((g, i) => {
           for (const el of g)
-            if ((el === best) !== el.classList.contains("is-focus"))
-              el.classList.toggle("is-focus", el === best);
-        }
+            if ((el === picks[i]) !== el.classList.contains("is-focus"))
+              el.classList.toggle("is-focus", el === picks[i]);
+        });
       };
       addEventListener(
         "scroll",
@@ -425,28 +432,46 @@
     )
     .forEach((el) => {
       const max = el.classList.contains("logo") ? 4 : 6;
-      el.addEventListener("pointermove", (e) => {
+      // a mouse can report hundreds of moves a second; only the latest one
+      // per frame is measured and written
+      let last = null;
+      const apply = () => {
+        const e = last;
+        last = null;
+        if (!e) return;
         const r = el.getBoundingClientRect();
         const x = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
         const y = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
         el.style.setProperty("--bx", `${(x * max).toFixed(1)}px`);
         el.style.setProperty("--by", `${(y * max * 0.6).toFixed(1)}px`);
+      };
+      el.addEventListener("pointermove", (e) => {
+        if (!last) requestAnimationFrame(apply);
+        last = e;
       });
       el.addEventListener("pointerleave", () => {
+        last = null;
         el.style.removeProperty("--bx");
         el.style.removeProperty("--by");
       });
     });
 
-  // spotlight: cards light up softly under the cursor
+  // spotlight: cards light up softly under the cursor, once per frame at most
+  let spotEvent = null;
+  const spot = () => {
+    const e = spotEvent;
+    spotEvent = null;
+    const el = e && e.target instanceof Element && e.target.closest(SPOT);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    el.style.setProperty("--my", `${e.clientY - r.top}px`);
+  };
   document.addEventListener(
     "pointermove",
     (e) => {
-      const el = e.target instanceof Element && e.target.closest(SPOT);
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
-      el.style.setProperty("--my", `${e.clientY - r.top}px`);
+      if (!spotEvent) requestAnimationFrame(spot);
+      spotEvent = e;
     },
     { passive: true },
   );
@@ -528,12 +553,14 @@
     ctx.quadraticCurveTo(x, y, x, y - s);
     ctx.fill();
   };
-  const drawSky = (t) => {
+  // step is how many 60fps frames have passed, so the drift is the same speed
+  // whatever the screen's refresh rate or how often the sky is drawn
+  const drawSky = (t, step = 1) => {
     const sec = t / 1000;
     ctx.clearRect(0, 0, w, h);
     for (const s of stars) {
       if (!reduce) {
-        s.y -= 0.012 * s.depth;
+        s.y -= 0.012 * s.depth * step;
         if (s.y < 0) s.y += h;
       }
       let x = (s.x + px * s.depth) % w,
@@ -856,9 +883,50 @@
   let gx = pointer.x,
     gy = pointer.y,
     lastScroll = scrollY,
-    drag = 0;
+    drag = 0,
+    lastFrame = 0,
+    lastSky = 0,
+    glowOn = false,
+    heroTf = "";
   const tilt = { x: 0, y: 0 };
+  // Speed: this loop ran at the screen's refresh rate (144 times a second on
+  // some monitors), redrew the sky every time and wrote every style whether or
+  // not it had changed, which held a phone to about 15 frames a second. It now
+  // runs at most 60 times a second, draws the sky at 30 on touch screens,
+  // measures before it writes, and only writes a style when its value changes.
+  const skyEvery = finePointer ? 15 : 31;
+  // Where the head artwork sits on the page. Measuring it every frame forced
+  // the browser to recalculate styles each time, since the CSS animations keep
+  // them dirty; it only moves when the layout does, so it is measured then.
+  const figBox = { top: 0, left: 0, width: 1, height: 1 };
+  const measureFig = () => {
+    if (!heroImg) return;
+    const b = fig.getBoundingClientRect();
+    figBox.top = b.top + scrollY;
+    figBox.left = b.left;
+    figBox.width = b.width || 1;
+    figBox.height = b.height || 1;
+  };
+  if (heroImg) {
+    measureFig();
+    addEventListener("resize", measureFig);
+    addEventListener("load", measureFig);
+    if ("ResizeObserver" in window)
+      new ResizeObserver(() => measureFig()).observe(document.body);
+  }
   const frame = (t) => {
+    requestAnimationFrame(frame);
+    if (t - lastFrame < 15) return;
+    lastFrame = t;
+    const r = heroImg
+      ? {
+          top: figBox.top - scrollY,
+          bottom: figBox.top - scrollY + figBox.height,
+          left: figBox.left,
+          width: figBox.width,
+          height: figBox.height,
+        }
+      : null;
     if (!reduce) {
       if (finePointer) {
         const tx = pointer.active ? -(pointer.x - w / 2) * 0.02 : 0;
@@ -869,7 +937,10 @@
         // touch: the stars scroll a little with the page, deeper ones slower, so the sky has depth
         py += (-scrollY * 0.1 - py) * 0.18;
       }
-      drawSky(t);
+      if (t - lastSky >= skyEvery) {
+        drawSky(t, Math.min(4, (t - (lastSky || t)) / 16.7));
+        lastSky = t;
+      }
 
       // touch: the drawings sway with the scroll position and trail a little behind fast scrolls
       const v = scrollY - lastScroll;
@@ -909,8 +980,15 @@
         it.x += (ix - it.x) * 0.06;
         it.y += (iy - it.y) * 0.06;
         it.near += (near - it.near) * 0.08;
-        it.el.style.transform = `translate3d(${it.x.toFixed(1)}px,${it.y.toFixed(1)}px,0)${shrink}`;
-        it.el.style.setProperty("--near", it.near.toFixed(3));
+        const tf = `translate3d(${it.x.toFixed(1)}px,${it.y.toFixed(1)}px,0)${shrink}`;
+        if (tf !== it.tf) it.el.style.transform = it.tf = tf;
+        // opacity is set directly rather than through a CSS variable, which
+        // made the browser recalculate the drawing's whole subtree every frame
+        const op = (
+          (it.s.pink ? 0.09 : 0.07) +
+          it.near * (it.s.pink ? 0.14 : 0.12)
+        ).toFixed(3);
+        if (op !== it.op) it.el.style.opacity = it.op = op;
       });
     }
 
@@ -918,13 +996,14 @@
       const ease = reduce ? 1 : 0.1;
       gx += (pointer.x - gx) * ease;
       gy += (pointer.y - gy) * ease;
-      glow.style.transform = `translate3d(${gx.toFixed(1)}px,${gy.toFixed(1)}px,0)`;
-      glow.classList.toggle("on", pointer.active);
+      const tf = `translate3d(${gx.toFixed(1)}px,${gy.toFixed(1)}px,0)`;
+      if (tf !== glow._tf) glow.style.transform = glow._tf = tf;
+      if (glowOn !== pointer.active)
+        glow.classList.toggle("on", (glowOn = pointer.active));
     }
 
     if (heroImg) {
       // the artwork turns a little to face the cursor, and the doodles drift further than the head for depth
-      const r = fig.getBoundingClientRect();
       let nx = 0,
         ny = 0;
       if (r.bottom > 0 && r.top < innerHeight) {
@@ -962,11 +1041,14 @@
       }
       tilt.x += (nx - tilt.x) * 0.07;
       tilt.y += (ny - tilt.y) * 0.07;
-      heroImg.style.transform = `perspective(1200px) rotateY(${(tilt.x * 9).toFixed(2)}deg) rotateX(${(-tilt.y * 7).toFixed(2)}deg) translate3d(${(tilt.x * 10).toFixed(1)}px,${(tilt.y * 8).toFixed(1)}px,0)`;
-      for (const dd of doodles)
-        dd.el.style.transform = `translate3d(${(tilt.x * dd.depth * 12).toFixed(1)}px,${(tilt.y * dd.depth * 10).toFixed(1)}px,0)`;
+      const tf = `perspective(1200px) rotateY(${(tilt.x * 9).toFixed(2)}deg) rotateX(${(-tilt.y * 7).toFixed(2)}deg) translate3d(${(tilt.x * 10).toFixed(1)}px,${(tilt.y * 8).toFixed(1)}px,0)`;
+      // once the head has settled nothing changes, so nothing is written
+      if (tf !== heroTf) {
+        heroImg.style.transform = heroTf = tf;
+        for (const dd of doodles)
+          dd.el.style.transform = `translate3d(${(tilt.x * dd.depth * 12).toFixed(1)}px,${(tilt.y * dd.depth * 10).toFixed(1)}px,0)`;
+      }
     }
-    requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
 })();

@@ -232,7 +232,9 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--pink)}
 .countdown-grid div{background:var(--bg);border:1px solid transparent;border-radius:var(--r-md);padding:20px 10px 16px;text-align:center}
 .countdown-grid span{display:block;font:500 clamp(2.4rem,5.4vw,4.6rem)/1 var(--nums);font-variant-numeric:tabular-nums;color:var(--text)}
 .countdown-grid span.tick{animation:tick .45s var(--ease)}
+.countdown-grid span.tick2{animation:tick2 .45s var(--ease)}
 @keyframes tick{from{transform:translateY(-30%);opacity:.25}to{transform:none;opacity:1}}
+@keyframes tick2{from{transform:translateY(-30%);opacity:.25}to{transform:none;opacity:1}}
 .countdown-grid small{display:block;margin-top:10px;font:600 .82rem/1 var(--sans);color:var(--pink)}
 
 /* home: realm strip and eight-way map */
@@ -596,7 +598,7 @@ a.tile{text-decoration:none;color:inherit}
 /* reduced motion (Windows "Animation effects" off): things that move on their own hold still.
    Reactions to the mouse (lifts, the wordmark hop, the artwork tilt, magnetic buttons) still work. */
 @media (prefers-reduced-motion:reduce){
-  .hero-poster,.ambient-shape,.countdown-grid span.tick{animation:none}
+  .hero-poster,.ambient-shape,.countdown-grid span.tick,.countdown-grid span.tick2{animation:none}
   .hero-poster:not(.burst) .doodle svg{animation:none}
 }
 

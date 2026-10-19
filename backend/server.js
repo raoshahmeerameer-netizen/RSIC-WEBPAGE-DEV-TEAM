@@ -250,10 +250,27 @@ const loadContent = async (force) => {
   return contentCache.map;
 };
 
+// Every page view asks for the text, and the database sits in Mumbai, so a
+// visitor who arrived after the 15 seconds were up waited up to a second for
+// it. The public route answers from memory straight away and refreshes in the
+// background instead. Saves from the dashboards still refresh immediately,
+// and the registration check keeps using loadContent, so the open/closed
+// switch is never served stale.
+let contentRefresh = null;
+const loadContentFast = async () => {
+  if (!contentCache.at) return loadContent();
+  if (Date.now() - contentCache.at >= 15000 && !contentRefresh)
+    contentRefresh = loadContent(true)
+      .catch((err) => console.error("content refresh:", err.message))
+      .finally(() => (contentRefresh = null));
+  return contentCache.map;
+};
+loadContent().catch((err) => console.error("content warm-up:", err.message));
+
 // Public: every editable string, so the pages can fill themselves in.
 app.get("/api/content", async (_req, res) => {
   try {
-    res.json({ content: await loadContent() });
+    res.json({ content: await loadContentFast() });
   } catch (err) {
     console.error("content:", err.message);
     res.status(500).json({ error: "Could not load site content." });
