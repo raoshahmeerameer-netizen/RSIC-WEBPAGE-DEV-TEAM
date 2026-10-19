@@ -5,6 +5,10 @@ const cors = require("cors");
 const multer = require("multer");
 const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config({ path: __dirname + "/.env" });
+// Version the CSS and JS URLs from their contents. "prestart" was meant to do
+// this, but Hostinger starts this file directly and skips npm's hooks, so the
+// pages kept an old version for days. It never throws, so it cannot stop boot.
+require("../tools/stamp-assets");
 // Loaded after dotenv, because it reads the mail credentials at require time.
 const {
   sendConfirmation,
