@@ -1,5 +1,45 @@
 /* RSIC 2026, v7. Small enhancements plus the moving background; every page still reads fine without this file. */
 
+// Lite mode for phones and weak PCs. Touch screens, four cores or fewer, 4 GB
+// of memory or less, or data saver switch it on straight away; the sky loop
+// below also switches it on if a device drops frames in its first seconds.
+// It only removes work (see the end of styles.css and the sky below), never
+// content. ?lite=0 or ?lite=1 in the address forces it either way, for testing.
+(() => {
+  let lite = false;
+  try {
+    const forced = new URLSearchParams(location.search).get("lite");
+    if (forced === "0" || forced === "1") {
+      lite = forced === "1";
+      sessionStorage.setItem("rsic-lite", forced);
+    } else if (sessionStorage.getItem("rsic-lite") !== null) {
+      lite = sessionStorage.getItem("rsic-lite") === "1";
+    } else {
+      const conn = navigator.connection || {};
+      lite =
+        matchMedia("(hover: none)").matches ||
+        (navigator.hardwareConcurrency || 8) <= 4 ||
+        (navigator.deviceMemory || 8) <= 4 ||
+        conn.saveData === true;
+    }
+  } catch (_e) {
+    lite = matchMedia("(hover: none)").matches;
+  }
+  if (lite) document.documentElement.classList.add("lite");
+})();
+const rsicLite = () => document.documentElement.classList.contains("lite");
+
+// Keep the CSS, script, images and fonts on the device after the first visit,
+// so later pages only fetch their HTML. Never on the dashboards.
+if (
+  "serviceWorker" in navigator &&
+  (location.protocol === "https:" || location.hostname === "localhost") &&
+  !/^\/(admindashboard|regidash)/.test(location.pathname)
+)
+  addEventListener("load", () =>
+    navigator.serviceWorker.register("/sw.js").catch(() => {}),
+  );
+
 (() => {
   const root = document.documentElement;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -520,7 +560,12 @@
   resize();
   const makeStars = () =>
     Array.from(
-      { length: Math.min(260, Math.max(90, Math.floor((w * h) / 5200))) },
+      // lite mode draws half as many stars
+      {
+        length: rsicLite()
+          ? Math.min(120, Math.max(50, Math.floor((w * h) / 10400)))
+          : Math.min(260, Math.max(90, Math.floor((w * h) / 5200))),
+      },
       () => ({
         x: rand() * w,
         y: rand() * h,
@@ -894,7 +939,34 @@
   // not it had changed, which held a phone to about 15 frames a second. It now
   // runs at most 60 times a second, draws the sky at 30 on touch screens,
   // measures before it writes, and only writes a style when its value changes.
-  const skyEvery = finePointer ? 15 : 31;
+  // lite mode redraws the sky 15 times a second, which is still a twinkle
+  const skyEvery = () => (rsicLite() ? 66 : finePointer ? 15 : 31);
+  // The first seconds tell us whether this device keeps up. One that cannot
+  // hold about 40 frames a second gets lite mode for the rest of the visit;
+  // one that can is remembered, so a slow page load later does not count.
+  const probe = { on: false, start: 0, last: 0, n: 0, sum: 0 };
+  try {
+    probe.on = !rsicLite() && sessionStorage.getItem("rsic-lite") === null;
+  } catch (_e) {}
+  const checkPace = (t) => {
+    if (!probe.start) probe.start = t;
+    else if (t - probe.start > 1500 && t - probe.last < 200) {
+      // gaps over 200ms mean the tab was hidden, not that it was slow
+      probe.n += 1;
+      probe.sum += t - probe.last;
+    }
+    probe.last = t;
+    if (t - probe.start < 4500) return;
+    probe.on = false;
+    const slow = probe.n > 20 && probe.sum / probe.n > 26;
+    try {
+      sessionStorage.setItem("rsic-lite", slow ? "1" : "0");
+    } catch (_e) {}
+    if (slow) {
+      document.documentElement.classList.add("lite");
+      stars = makeStars();
+    }
+  };
   // Where the head artwork sits on the page. Measuring it every frame forced
   // the browser to recalculate styles each time, since the CSS animations keep
   // them dirty; it only moves when the layout does, so it is measured then.
@@ -916,6 +988,7 @@
   }
   const frame = (t) => {
     requestAnimationFrame(frame);
+    if (probe.on) checkPace(t);
     if (t - lastFrame < 15) return;
     lastFrame = t;
     const r = heroImg
@@ -937,7 +1010,7 @@
         // touch: the stars scroll a little with the page, deeper ones slower, so the sky has depth
         py += (-scrollY * 0.1 - py) * 0.18;
       }
-      if (t - lastSky >= skyEvery) {
+      if (t - lastSky >= skyEvery()) {
         drawSky(t, Math.min(4, (t - (lastSky || t)) / 16.7));
         lastSky = t;
       }
@@ -951,7 +1024,8 @@
       const mx = pointer.x - innerWidth / 2,
         my = pointer.y - innerHeight / 2;
       const shrink = !finePointer && innerWidth <= 760 ? " scale(.7)" : "";
-      items.forEach((it, i) => {
+      // in lite mode the drawings hold still, so none of this runs
+      if (!rsicLite()) items.forEach((it, i) => {
         // gentle parallax (deeper shapes move more), plus a soft push away from the pointer or the tap
         let ix,
           iy,
@@ -992,7 +1066,7 @@
       });
     }
 
-    if (glow) {
+    if (glow && !rsicLite()) {
       const ease = reduce ? 1 : 0.1;
       gx += (pointer.x - gx) * ease;
       gy += (pointer.y - gy) * ease;

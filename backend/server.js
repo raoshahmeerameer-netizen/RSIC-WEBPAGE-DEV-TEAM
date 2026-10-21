@@ -1146,6 +1146,10 @@ app.use(
           "Cache-Control",
           "public, max-age=31536000, immutable",
         );
+      // The service worker must always be checked, or a fix to it could not
+      // reach anyone whose browser was holding the old copy.
+      if (web.endsWith("/sw.js"))
+        return res.setHeader("Cache-Control", "no-cache, no-store");
       // The stylesheet and the script were being fetched again on every one
       // of the 29 pages. Five minutes saves that without making a deploy take
       // long to reach anyone.

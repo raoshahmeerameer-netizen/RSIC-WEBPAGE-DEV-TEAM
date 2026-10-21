@@ -923,3 +923,23 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
   .letter-panel{padding:24px 20px 28px}
 }
 
+
+/* ---------- speed: GPU layers for the background, and lite mode ----------
+   The star canvas and the drawings are fixed full-screen layers. Giving each
+   its own GPU layer and containing them means scrolling never repaints them
+   or makes the browser re-check the page around them. */
+.particles{will-change:transform;contain:strict}
+.ambient{transform:translateZ(0);contain:strict}
+
+/* Lite mode: phones and tablets, PCs with few cores or little memory, data
+   saver, or any device that drops frames in its first seconds (script.js adds
+   html.lite). The look stays the same; what goes is the work no one sees on a
+   small screen: the see-through blur behind the header, the grain blended
+   over every pixel, the cursor glow, half the drawings, and the motion that
+   runs on its own. Reactions to a tap or the mouse stay. */
+.lite .site-head{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(4,11,26,.95)}
+.lite body::after{display:none}
+.lite .cursor-glow{display:none}
+.lite .ambient-item:nth-child(n+6){display:none}
+.lite .ambient-shape,.lite .hero-poster{animation:none}
+.lite .hero-poster:not(.burst) .doodle svg{animation:none}
