@@ -1504,7 +1504,7 @@ if (regForm) {
 
   // The amount, shown while the delegation is being filled in. It is the same
   // rule the server bills by (mail.js priceFor): the delegation fee plus the
-  // delegate fee for everyone besides the head delegate, at the early bird
+  // delegate fee for every delegate, head delegate included, at the early bird
   // rate until the early bird date (inclusive, Pakistan time). The confirmed
   // amount is fixed when the organisers confirm, from the time of registering.
   const amountBox = document.getElementById("regAmount");
@@ -1536,10 +1536,10 @@ if (regForm) {
         "The delegation fee is " + pkrOf(delegation) +
         ", plus " + pkrOf(perDelegate) +
         (early ? " (early bird)" : "") +
-        " for each delegate besides the head delegate.";
+        " for each delegate, the head delegate included.";
       return;
     }
-    const charged = total - 1;
+    const charged = total;
     totalEl.textContent = pkrOf(charged * perDelegate + delegation);
     const dateLabel = new Date(day + "T12:00:00+05:00").toLocaleDateString(
       "en-GB",
@@ -1547,7 +1547,7 @@ if (regForm) {
     );
     howEl.textContent =
       charged + (charged === 1 ? " delegate" : " delegates") +
-      " besides the head delegate × " + pkrOf(perDelegate) +
+      " (head delegate included) × " + pkrOf(perDelegate) +
       (early ? " (early bird, till " + dateLabel + ")" : "") +
       " + delegation fee " + pkrOf(delegation) +
       ". The bank details come in your confirmation email.";

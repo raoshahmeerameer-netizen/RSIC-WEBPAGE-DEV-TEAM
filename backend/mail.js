@@ -83,9 +83,10 @@ const DEFAULT_NOTES = [
 ].join("\n\n");
 
 // ------------------------------------------------------------------ the amount
-// The owner's rule (2026-10-22): the delegation fee, plus the per-delegate fee
-// for every delegate except the head delegate. Six delegates including the head
-// pay five delegate fees and one delegation fee. Schools that registered on or
+// The owner's rule (2026-10-22, corrected the same day): the delegation fee,
+// plus the per-delegate fee for every delegate, the head delegate included.
+// Six delegates pay six delegate fees and one delegation fee: 6 x 2,000 +
+// 3,500 = 15,500 at early bird. Schools that registered on or
 // before the early bird date pay the early bird delegate fee, everyone else the
 // normal one. The fees are read from the same settings the register page
 // shows, so the page and the bill cannot disagree.
@@ -120,7 +121,7 @@ const priceFor = (row, content) => {
   );
   const delegation = money(c["fee.delegation"]);
   const total = Number(row && row.delegates) || 0;
-  const charged = Math.max(0, total - 1);
+  const charged = total;
   const computed =
     perDelegate != null && delegation != null && total
       ? charged * perDelegate + delegation
@@ -322,7 +323,7 @@ const priceLine = (p) => {
   if (p.perDelegate == null || p.delegation == null) return "";
   const who =
     (p.charged === 1 ? "1 delegate" : p.charged + " delegates") +
-    " besides the head delegate";
+    " (head delegate included)";
   return (
     who +
     " x " +
