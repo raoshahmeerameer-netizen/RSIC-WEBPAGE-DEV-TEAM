@@ -915,6 +915,10 @@ const sendConfirmation = async (row, content) => {
       id: info.messageId,
       attached: attachments.map((a) => a.filename),
       missing,
+      // Blank bank fields are left out of the email, so the dashboard warns
+      // when a bill went out without anywhere to send the money.
+      noBank: !["payment.bank_name", "payment.account_title", "payment.account_number", "payment.iban"]
+        .some((k) => oneLine(c[k] || "")),
     };
   } catch (err) {
     // An approval must never fail because a mail server was having a moment,

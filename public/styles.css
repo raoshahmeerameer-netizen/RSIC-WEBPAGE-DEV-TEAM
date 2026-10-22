@@ -949,3 +949,9 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
 .early-bird.is-closed{color:var(--text-soft)}
 .early-bird.is-closed b{text-decoration:line-through;text-decoration-color:var(--pink)}
 .early-bird-closed{color:var(--pink);font-weight:600}
+
+/* register: the amount to pay, worked out as the delegation is filled in */
+.reg-amount{margin:4px 0 20px;padding:18px 20px;border-radius:var(--r-sm);background:var(--surface-2);border:1px solid var(--edge)}
+.reg-amount small{display:block;font:600 .85rem/1.3 var(--sans);color:var(--pink)}
+.reg-amount-total{margin:6px 0 4px;font:600 clamp(1.4rem,3vw,1.8rem)/1.2 var(--serif);color:var(--text)}
+.reg-amount-how{margin:0;font:500 .9rem/1.5 var(--sans);color:var(--text-soft)}

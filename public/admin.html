@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=ff941fa05b" />
+    <link rel="stylesheet" href="/styles.css?v=1e5c0d6c3b" />
 
     <style>
       .admin-wrap {
@@ -704,7 +704,7 @@
       </form>
     </div>
 
-    <script src="/script.js?v=4e6daeae0c" defer></script>
+    <script src="/script.js?v=1c76a5f2af" defer></script>
     <script>
       (() => {
         // ---------------------------------------------------------- setup
@@ -1075,8 +1075,11 @@
                   (mail.missing && mail.missing.length
                     ? ". Not attached, because it is not uploaded or could not be fetched: " +
                       mail.missing.join(", ")
-                    : ", with both forms attached."),
-                true,
+                    : ", with both forms attached.") +
+                  (mail.noBank
+                    ? " Warning: the bank details are blank in Site text → Payment details, so the email had no bank details. Fill them in and use Resend email."
+                    : ""),
+                !mail.noBank,
               );
             else if (mail.skipped)
               say($("tableMsg"), "Confirmed. " + mail.error, true);

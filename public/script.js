@@ -1502,6 +1502,58 @@ if (regForm) {
     paintTally();
   };
 
+  // The amount, shown while the delegation is being filled in. It is the same
+  // rule the server bills by (mail.js priceFor): the delegation fee plus the
+  // delegate fee for everyone besides the head delegate, at the early bird
+  // rate until the early bird date (inclusive, Pakistan time). The confirmed
+  // amount is fixed when the organisers confirm, from the time of registering.
+  const amountBox = document.getElementById("regAmount");
+  let feeContent = null;
+  const moneyOf = (s) => {
+    const m = String(s == null ? "" : s).replace(/,/g, "").match(/\d+(\.\d+)?/);
+    return m ? Math.round(Number(m[0])) : null;
+  };
+  const pkrOf = (n) => "PKR " + Number(n).toLocaleString("en-US");
+  const paintAmount = () => {
+    if (!amountBox || !feeContent) return;
+    const c = feeContent;
+    const until = String(c["payment.early_bird_until"] || "2026-11-01").trim();
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(until) ? until : "2026-11-01";
+    const early = Date.now() <= new Date(day + "T23:59:59.999+05:00").getTime();
+    const perDelegate = moneyOf(c[early ? "fee.early_bird" : "fee.normal"]);
+    const delegation = moneyOf(c["fee.delegation"]);
+    if (perDelegate == null || delegation == null) {
+      amountBox.hidden = true;
+      return;
+    }
+    amountBox.hidden = false;
+    const total = delegatesOk() ? parseInt(delegates.value, 10) : 0;
+    const totalEl = document.getElementById("regAmountTotal");
+    const howEl = document.getElementById("regAmountHow");
+    if (!total) {
+      totalEl.textContent = "Choose the number of delegates";
+      howEl.textContent =
+        "The delegation fee is " + pkrOf(delegation) +
+        ", plus " + pkrOf(perDelegate) +
+        (early ? " (early bird)" : "") +
+        " for each delegate besides the head delegate.";
+      return;
+    }
+    const charged = total - 1;
+    totalEl.textContent = pkrOf(charged * perDelegate + delegation);
+    const dateLabel = new Date(day + "T12:00:00+05:00").toLocaleDateString(
+      "en-GB",
+      { day: "numeric", month: "long", timeZone: "Asia/Karachi" },
+    );
+    howEl.textContent =
+      charged + (charged === 1 ? " delegate" : " delegates") +
+      " besides the head delegate × " + pkrOf(perDelegate) +
+      (early ? " (early bird, till " + dateLabel + ")" : "") +
+      " + delegation fee " + pkrOf(delegation) +
+      ". The bank details come in your confirmation email.";
+  };
+  delegates.addEventListener("input", paintAmount);
+
   const setOpenState = (content) => {
     isOpen = (content["registration.open"] || "off").toLowerCase() === "on";
     regForm.dataset.open = isOpen ? "yes" : "no";
@@ -1523,6 +1575,8 @@ if (regForm) {
     if (!content) return paintTally();
     applyRules(content);
     setOpenState(content);
+    feeContent = content;
+    paintAmount();
   });
   paintTally();
 
@@ -1611,11 +1665,18 @@ if (regForm) {
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         regStatus.className = "reg-status is-good";
-        regStatus.textContent = data.message || "Registration received.";
+        // the form is about to clear, so the amount is repeated here
+        const owed = document.getElementById("regAmountTotal");
+        const owedText =
+          amountBox && !amountBox.hidden && owed && /PKR/.test(owed.textContent)
+            ? " Amount to pay: " + owed.textContent + ". The bank details come in your confirmation email."
+            : "";
+        regStatus.textContent = (data.message || "Registration received.") + owedText;
         regForm.reset();
         photoFiles.length = 0;
         buildPeople();
         paintTally();
+        paintAmount();
       } else {
         regStatus.className = "reg-status is-bad";
         regStatus.textContent =
