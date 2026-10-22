@@ -943,3 +943,9 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
 .lite .ambient-item:nth-child(n+6){display:none}
 .lite .ambient-shape,.lite .hero-poster{animation:none}
 .lite .hero-poster:not(.burst) .doodle svg{animation:none}
+
+/* early bird: once its date has passed the line stays, struck through, so the
+   fee history is still readable, and the script adds "Closed." after it */
+.early-bird.is-closed{color:var(--text-soft)}
+.early-bird.is-closed b{text-decoration:line-through;text-decoration-color:var(--pink)}
+.early-bird-closed{color:var(--pink);font-weight:600}

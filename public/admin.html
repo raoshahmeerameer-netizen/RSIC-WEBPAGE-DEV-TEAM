@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=97af5dacc4" />
+    <link rel="stylesheet" href="/styles.css?v=ff941fa05b" />
 
     <style>
       .admin-wrap {
@@ -106,6 +106,7 @@
         border-color: var(--pink);
         color: var(--pink-light);
       }
+      .status-badge.pay { margin-top: 6px; }
       .status-badge.pending {
         background: rgba(127, 176, 230, 0.15);
         border-color: var(--blue);
@@ -703,7 +704,7 @@
       </form>
     </div>
 
-    <script src="/script.js?v=0070bdb26c" defer></script>
+    <script src="/script.js?v=4e6daeae0c" defer></script>
     <script>
       (() => {
         // ---------------------------------------------------------- setup
@@ -955,6 +956,21 @@
                 "status-badge " + (confirmed ? "confirmed" : "pending");
               badge.textContent = status;
               st.append(badge);
+              // Payment is tracked once a registration is confirmed: the bill
+              // goes out with the confirmation, and the money follows.
+              const paid = row.payment_status === "Received";
+              if (confirmed) {
+                const pay = document.createElement("span");
+                pay.className =
+                  "status-badge pay " + (paid ? "confirmed" : "pending");
+                pay.textContent = paid ? "Payment received" : "Payment pending";
+                const amt = document.createElement("span");
+                amt.className = "row-sub";
+                amt.textContent = row.amount_due != null
+                  ? pkr(row.amount_due) + (row.fee_tier === "early" ? " · early bird" : row.fee_tier === "normal" ? " · normal" : "")
+                  : "Amount not set";
+                st.append(pay, amt);
+              }
 
               const actions = document.createElement("td");
               const wrap = document.createElement("div");
@@ -963,7 +979,7 @@
               const toggle = document.createElement("button");
               toggle.className = "action-btn";
               toggle.type = "button";
-              toggle.textContent = confirmed ? "Set pending" : "Approve";
+              toggle.textContent = confirmed ? "Set pending" : "Confirm & email";
               toggle.addEventListener("click", () =>
                 setStatus(row.id, confirmed ? "Pending" : "Confirmed", toggle),
               );
@@ -991,7 +1007,14 @@
                 again.addEventListener("click", () =>
                   setStatus(row.id, "Confirmed", again, true),
                 );
-                wrap.append(toggle, again, details, ...(REGI ? [] : [del]));
+                const payBtn = document.createElement("button");
+                payBtn.className = "action-btn" + (paid ? " ghost" : "");
+                payBtn.type = "button";
+                payBtn.textContent = paid ? "Mark payment pending" : "Mark payment received";
+                payBtn.addEventListener("click", () =>
+                  setPayment(row, paid ? "Pending" : "Received", payBtn),
+                );
+                wrap.append(payBtn, toggle, again, details, ...(REGI ? [] : [del]));
               } else wrap.append(toggle, details, ...(REGI ? [] : [del]));
               actions.append(wrap);
               tr.append(num, who, realm, st, actions);
@@ -1041,24 +1064,55 @@
             if (!mail)
               say(
                 $("tableMsg"),
-                status === "Confirmed" ? "Approved." : "Set back to pending.",
+                status === "Confirmed" ? "Confirmed." : "Set back to pending.",
                 true,
               );
             else if (mail.ok)
               say(
                 $("tableMsg"),
-                "Approved. Confirmation emailed to " + mail.to.join(" and "),
+                "Confirmed. Email with the amount and bank details sent to " +
+                  mail.to.join(" and ") +
+                  (mail.missing && mail.missing.length
+                    ? ". Not attached, because it is not uploaded or could not be fetched: " +
+                      mail.missing.join(", ")
+                    : ", with both forms attached."),
                 true,
               );
             else if (mail.skipped)
-              say($("tableMsg"), "Approved. " + mail.error, true);
+              say($("tableMsg"), "Confirmed. " + mail.error, true);
             else
               say(
                 $("tableMsg"),
-                "Approved, but the confirmation email did not send. " +
-                  mail.error,
+                "Confirmed, but the email did not send. " + mail.error,
                 false,
               );
+          } catch (err) {
+            say($("tableMsg"), err.message, false);
+            btn.disabled = false;
+          }
+        }
+
+        const pkr = (n) =>
+          n == null ? "" : "PKR " + Number(n).toLocaleString("en-US");
+
+        // Payment is marked separately from the confirmation, from either
+        // dashboard, once the transfer arrives.
+        async function setPayment(row, payment, btn) {
+          btn.disabled = true;
+          try {
+            await request("/api/registrations/" + row.id, {
+              method: "PATCH",
+              body: JSON.stringify({ payment }),
+            });
+            await loadRegistrations();
+            say(
+              $("tableMsg"),
+              (row.school || "This delegation") +
+                (payment === "Received"
+                  ? ": payment marked as received."
+                  : ": payment set back to pending."),
+              true,
+            );
           } catch (err) {
             say($("tableMsg"), err.message, false);
             btn.disabled = false;
@@ -1109,8 +1163,24 @@
               keys.length ? keys.map(realmName).join(", ") : "None chosen",
             ],
           ];
+          const when = (t) => (t ? new Date(t).toLocaleString() : "—");
           pairs.push(
             ["Status", row.status || "Pending"],
+            ["Confirmed", when(row.confirmed_at)],
+            [
+              "Amount due",
+              row.amount_due != null ? pkr(row.amount_due) : "Set when confirmed",
+            ],
+            [
+              "Fee",
+              row.fee_tier === "early"
+                ? "Early bird"
+                : row.fee_tier === "normal"
+                  ? "Normal"
+                  : "—",
+            ],
+            ["Payment", row.payment_status === "Received" ? "Received" : "Pending"],
+            ["Payment received", when(row.payment_received_at)],
             [
               "Registered",
               row.created_at ? new Date(row.created_at).toLocaleString() : "—",
@@ -1709,7 +1779,30 @@
                 ["Delegations", String(list.length)],
                 ["Delegates in total", String(people)],
                 ["With a head delegate on file", String(heads)],
-              ].concat(Object.keys(byStatus).map((k) => [k, String(byStatus[k])])),
+              ]
+                .concat(Object.keys(byStatus).map((k) => [k, String(byStatus[k])]))
+                .concat([
+                  [
+                    "Payments received",
+                    String(list.filter((r) => r.payment_status === "Received").length),
+                  ],
+                  [
+                    "Amount received",
+                    pkr(
+                      list
+                        .filter((r) => r.payment_status === "Received")
+                        .reduce((n, r) => n + (Number(r.amount_due) || 0), 0),
+                    ),
+                  ],
+                  [
+                    "Amount outstanding",
+                    pkr(
+                      list
+                        .filter((r) => r.status === "Confirmed" && r.payment_status !== "Received")
+                        .reduce((n, r) => n + (Number(r.amount_due) || 0), 0),
+                    ),
+                  ],
+                ]),
             }),
           );
 
@@ -1770,7 +1863,8 @@
             doc.setTextColor.apply(doc, CREAM);
             const nameLines = doc.splitTextToSize(
               String(r.school || "Unnamed school"),
-              FULL - 120,
+              // room for the status badge, which now carries the payment too
+              FULL - 190,
             );
             doc.text(nameLines.slice(0, 2), M, 46);
             doc.setFont("helvetica", "normal");
@@ -1784,7 +1878,13 @@
               nameLines.length > 1 ? 88 : 72,
             );
 
-            const status = r.status || "Pending";
+            const status =
+              (r.status || "Pending") +
+              (r.status === "Confirmed"
+                ? r.payment_status === "Received"
+                  ? " · Paid"
+                  : " · Payment pending"
+                : "");
             doc.setFont("helvetica", "bold");
             doc.setFontSize(9);
             const pw = doc.getTextWidth(status) + 22;
@@ -1804,6 +1904,22 @@
                   ["Team name", r.team_name],
                   ["Delegates", r.delegates],
                   ["Realms chosen", keys.length],
+                  ["Amount due", r.amount_due != null ? pkr(r.amount_due) : ""],
+                  [
+                    "Fee",
+                    r.fee_tier === "early" ? "Early bird" : r.fee_tier === "normal" ? "Normal" : "",
+                  ],
+                  [
+                    "Payment",
+                    r.payment_status === "Received"
+                      ? "Received" +
+                        (r.payment_received_at
+                          ? " " + new Date(r.payment_received_at).toLocaleDateString()
+                          : "")
+                      : r.status === "Confirmed"
+                        ? "Pending"
+                        : "",
+                  ],
                 ].filter((row) => row[1] != null && row[1] !== ""),
                 columnStyles: {
                   0: { cellWidth: 150, textColor: SOFT },
@@ -2040,6 +2156,7 @@
             // you have one row per delegation again.
             const head = [
               "No.", "Registered", "Status",
+              "Payment", "Amount due (PKR)", "Fee", "Payment received",
               "School", "School email", "Team name",
               "Supervisor", "Supervisor number", "Supervisor email",
               "Delegates", "Realm count", "Realms",
@@ -2065,6 +2182,10 @@
               const list = Array.isArray(r.delegate_list) ? r.delegate_list : [];
               const delegation = [
                 refNo(r), stamp(r.created_at), r.status || "Pending",
+                r.payment_status === "Received" ? "Received" : "Pending",
+                r.amount_due != null ? r.amount_due : "",
+                r.fee_tier === "early" ? "Early bird" : r.fee_tier === "normal" ? "Normal" : "",
+                stamp(r.payment_received_at),
                 r.school, r.school_email, r.team_name,
                 r.supervisor_name || r.contact_name,
                 r.supervisor_phone || r.phone,

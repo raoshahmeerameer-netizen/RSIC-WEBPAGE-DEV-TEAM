@@ -13,6 +13,7 @@ require("../tools/stamp-assets");
 const {
   sendConfirmation,
   renderConfirmation,
+  priceFor,
   mailConfigured,
   FIELD_GROUPS,
   ALL_FIELDS,
@@ -816,7 +817,31 @@ app.get("/api/registrations", requireStaff, async (_req, res) => {
 
 app.patch("/api/registrations/:id", requireStaff, async (req, res) => {
   const status = req.body && req.body.status;
+  const payment = req.body && req.body.payment;
   const resend = Boolean(req.body && req.body.resend);
+
+  // Payment is tracked on its own (owner, 2026-10-22): a registration is
+  // confirmed and emailed first, and marked paid later when the money arrives.
+  // Both dashboards can do this.
+  if (payment !== undefined) {
+    if (!["Pending", "Received"].includes(payment))
+      return res
+        .status(400)
+        .json({ error: "Payment must be Pending or Received." });
+    const { data: updated, error } = await supabase
+      .from("registrations")
+      .update({
+        payment_status: payment,
+        payment_received_at: payment === "Received" ? new Date().toISOString() : null,
+      })
+      .eq("id", req.params.id)
+      .select("id");
+    if (error) return res.status(500).json({ error: error.message });
+    if (!updated || !updated.length)
+      return res.status(404).json({ error: "No such registration." });
+    return res.json({ ok: true, payment });
+  }
+
   if (!["Pending", "Confirmed"].includes(status))
     return res
       .status(400)
@@ -835,25 +860,37 @@ app.patch("/api/registrations/:id", requireStaff, async (req, res) => {
 
   const wasConfirmed = row.status === "Confirmed";
 
+  let content = {};
+  try {
+    content = await loadContent();
+  } catch (_e) {
+    // The template falls back to the wording built into mail.js, so an
+    // unreachable site_content still gets a correct confirmation out.
+  }
+
+  // The first confirmation fixes the price tier and the amount on the row, so
+  // the bill a school was sent never changes under it, on a resend or after a
+  // fee is edited.
+  const update = { status };
+  if (status === "Confirmed" && !wasConfirmed) {
+    const price = priceFor({ ...row, amount_due: null, fee_tier: null }, content);
+    update.confirmed_at = new Date().toISOString();
+    update.fee_tier = price.tier;
+    update.amount_due = price.amount;
+  }
+
   const { error } = await supabase
     .from("registrations")
-    .update({ status })
+    .update(update)
     .eq("id", req.params.id);
   if (error) return res.status(500).json({ error: error.message });
 
-  // Approving mails the head delegate and the supervisor. Confirming something
+  // Confirming mails the head delegate and the supervisor. Confirming something
   // already confirmed sends nothing, so a second click cannot mail a school
   // twice; Resend asks for it deliberately.
   let mail = null;
   if (status === "Confirmed" && (!wasConfirmed || resend)) {
-    let content = {};
-    try {
-      content = await loadContent();
-    } catch (_e) {
-      // The template falls back to the wording built into mail.js, so an
-      // unreachable site_content still gets a correct confirmation out.
-    }
-    mail = await sendConfirmation({ ...row, status }, content);
+    mail = await sendConfirmation({ ...row, ...update }, content);
     if (!mail.ok)
       console.error(
         "Confirmation email failed for registration " +

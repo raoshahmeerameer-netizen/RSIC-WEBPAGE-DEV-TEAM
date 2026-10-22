@@ -1238,6 +1238,31 @@ const rsicContentReady = (async () => {
       if (el && !el.dataset.cms) rsicSetText(el, v);
     });
 
+    // Early bird lasts until the date set in the dashboard, inclusive, in
+    // Pakistan time; the server charges by the same date. The sentence shows
+    // that date, and once it has passed the early bird line says it closed.
+    const until = String(content["payment.early_bird_until"] || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(until)) {
+      const end = new Date(until + "T23:59:59.999+05:00");
+      const label = new Date(until + "T12:00:00+05:00").toLocaleDateString(
+        "en-GB",
+        { day: "numeric", month: "long", timeZone: "Asia/Karachi" },
+      );
+      document
+        .querySelectorAll("[data-early-bird-date]")
+        .forEach((el) => (el.textContent = label));
+      if (Date.now() > end.getTime())
+        document.querySelectorAll("[data-early-bird]").forEach((el) => {
+          el.classList.add("is-closed");
+          if (!el.querySelector(".early-bird-closed")) {
+            const note = document.createElement("span");
+            note.className = "early-bird-closed";
+            note.textContent = " Closed.";
+            el.append(note);
+          }
+        });
+    }
+
     const noneNote = document.getElementById("formsNone");
     if (noneNote)
       noneNote.hidden = [...document.querySelectorAll("[data-cms-href]")].some(

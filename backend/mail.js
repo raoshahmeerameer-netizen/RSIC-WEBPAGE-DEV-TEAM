@@ -68,16 +68,72 @@ const getTransport = () => {
 const DEFAULT_SUBJECT =
   "RSIC 2026 registration confirmed: {school} ({reg_no})";
 
+// The confirmation goes out when the organisers confirm a registration, before
+// any money has moved (owner, 2026-10-22), so it asks for the payment rather
+// than thanking them for it.
 const DEFAULT_INTRO = [
-  "We have received your payment, and your delegation's place at RSIC 2026 is now confirmed.",
+  "Your delegation's registration for RSIC 2026 is confirmed.",
   "Your registration number is {reg_no}. Please quote it in any correspondence with us, and keep it with you on the day.",
-  "The details we hold for your delegation are set out below. Please check them.",
+  "To complete your registration, please transfer the amount set out below. The details we hold for your delegation follow it. Please check them.",
 ].join("\n\n");
 
 const DEFAULT_NOTES = [
-  "Please bring the signed waiver of liability and the head delegate form with you on the first day. Both can be downloaded from https://cityrsic.com/register.",
+  "The waiver of liability and the head delegate form are attached to this email. Please print them, sign them and bring them with you on the first day. Both can also be downloaded from https://cityrsic.com/register.",
   "If any of the details above are incorrect, reply to this email and we will correct them.",
 ].join("\n\n");
+
+// ------------------------------------------------------------------ the amount
+// The owner's rule (2026-10-22): the delegation fee, plus the per-delegate fee
+// for every delegate except the head delegate. Six delegates including the head
+// pay five delegate fees and one delegation fee. Schools that registered on or
+// before the early bird date pay the early bird delegate fee, everyone else the
+// normal one. The fees are read from the same settings the register page
+// shows, so the page and the bill cannot disagree.
+const money = (s) => {
+  const m = String(s == null ? "" : s)
+    .replace(/,/g, "")
+    .match(/\d+(\.\d+)?/);
+  return m ? Math.round(Number(m[0])) : null;
+};
+
+const formatPkr = (n) =>
+  n == null ? "" : "PKR " + Number(n).toLocaleString("en-US");
+
+// The whole of the early bird day counts, in Pakistan time.
+const earlyBirdEnd = (content) => {
+  const raw = String((content && content["payment.early_bird_until"]) || "");
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(raw.trim()) ? raw.trim() : "2026-11-01";
+  return new Date(day + "T23:59:59.999+05:00").getTime();
+};
+
+const priceFor = (row, content) => {
+  const c = content || {};
+  const registered =
+    row && row.created_at ? new Date(row.created_at).getTime() : Date.now();
+  // Once a registration is confirmed its tier and amount are saved, so a
+  // resend or a later fee change never alters what the school was first told.
+  const tier =
+    (row && row.fee_tier) ||
+    (registered <= earlyBirdEnd(c) ? "early" : "normal");
+  const perDelegate = money(
+    c[tier === "early" ? "fee.early_bird" : "fee.normal"],
+  );
+  const delegation = money(c["fee.delegation"]);
+  const total = Number(row && row.delegates) || 0;
+  const charged = Math.max(0, total - 1);
+  const computed =
+    perDelegate != null && delegation != null && total
+      ? charged * perDelegate + delegation
+      : null;
+  const saved = row && row.amount_due != null ? Number(row.amount_due) : null;
+  return {
+    tier,
+    perDelegate,
+    delegation,
+    charged,
+    amount: saved != null ? saved : computed,
+  };
+};
 
 const DEFAULT_SIGNOFF = "The RSIC team";
 
@@ -99,6 +155,14 @@ const FIELD_GROUPS = [
     id: "top",
     title: "Top of the email",
     fields: [["regno_box", "The big registration number box"]],
+  },
+  {
+    id: "payment",
+    title: "Payment",
+    fields: [
+      ["amount", "Amount to transfer, and how it is worked out"],
+      ["bank", "Bank details and payment instructions"],
+    ],
   },
   {
     id: "delegation",
@@ -240,7 +304,33 @@ const detailsOf = (row, content) => {
     venue: setting(content, "event.venue", FALLBACK.venue),
     contact: setting(content, "contact.email", FALLBACK.contact),
     map: safeUrl(setting(content, "event.map_url", FALLBACK.map)),
+    price: priceFor(row, content),
+    // The organisers fill these in from the dashboard. Any left blank are
+    // simply not shown.
+    bank: [
+      ["Bank", setting(content, "payment.bank_name", "")],
+      ["Account title", setting(content, "payment.account_title", "")],
+      ["Account number", setting(content, "payment.account_number", "")],
+      ["IBAN", setting(content, "payment.iban", "")],
+    ],
+    instructions: String((content && content["payment.instructions"]) || "").trim(),
   };
+};
+
+// "5 delegates x PKR 2,000 (early bird) + delegation fee PKR 3,500"
+const priceLine = (p) => {
+  if (p.perDelegate == null || p.delegation == null) return "";
+  const who =
+    (p.charged === 1 ? "1 delegate" : p.charged + " delegates") +
+    " besides the head delegate";
+  return (
+    who +
+    " x " +
+    formatPkr(p.perDelegate) +
+    (p.tier === "early" ? " (early bird)" : "") +
+    " + delegation fee " +
+    formatPkr(p.delegation)
+  );
 };
 
 // ------------------------------------------------------------- plain text
@@ -267,6 +357,24 @@ const textVersion = (d, intro, notes, signoff, show) => {
   out.push("Dear " + (d.head.name || "delegate") + ",");
   out.push("");
   out.push(intro);
+
+  if (show("amount") || show("bank")) {
+    const p = d.price;
+    const lines = [];
+    if (show("amount")) {
+      lines.push(
+        p.amount != null
+          ? pair(true, "Amount to transfer", formatPkr(p.amount))
+          : "  The amount will be confirmed to you separately.",
+      );
+      if (p.amount != null && priceLine(p)) lines.push("  " + priceLine(p));
+    }
+    if (show("bank")) {
+      d.bank.forEach((b) => lines.push(pair(true, b[0], b[1])));
+      if (d.instructions) lines.push("", d.instructions);
+    }
+    block("Payment", lines);
+  }
 
   block("Delegation", [
     pair(show("school"), "School", d.school),
@@ -432,6 +540,50 @@ const numbered = (items, note) => {
   );
 };
 
+// The amount sits in its own box, the same shape as the registration number,
+// because it is the one figure the school has to act on.
+const paymentHtml = (d, show) => {
+  if (!show("amount") && !show("bank")) return "";
+  const p = d.price;
+  let out = "";
+  if (show("amount")) {
+    out +=
+      p.amount != null
+        ? '<tr><td style="padding-top:8px"><table role="presentation" cellpadding="0" cellspacing="0" style="background:' +
+          C.raised +
+          ';border-radius:12px"><tr><td style="padding:12px 18px;font-family:' +
+          SANS +
+          ";font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:" +
+          C.soft +
+          '">Amount to transfer<div style="font-family:' +
+          SERIF +
+          ";font-size:26px;color:" +
+          C.pink +
+          ';margin-top:4px;letter-spacing:0;text-transform:none">' +
+          escapeHtml(formatPkr(p.amount)) +
+          "</div></td></tr></table>" +
+          (priceLine(p)
+            ? '<p style="margin:10px 0 0;font-family:' +
+              SANS +
+              ";font-size:12px;color:" +
+              C.soft +
+              '">' +
+              escapeHtml(priceLine(p)) +
+              "</p>"
+            : "") +
+          "</td></tr>"
+        : '<tr><td style="padding-top:8px">' +
+          paras("The amount will be confirmed to you separately.") +
+          "</td></tr>";
+  }
+  if (show("bank")) {
+    out += rows(d.bank);
+    if (d.instructions)
+      out += '<tr><td style="padding-top:12px">' + paras(d.instructions) + "</td></tr>";
+  }
+  return out ? heading("Payment") + out : "";
+};
+
 const htmlVersion = (d, intro, notes, signoff, show) => {
   // A heading is only emitted when its table has rows, so switching every field
   // in a section off takes the heading with it rather than leaving an empty one.
@@ -509,6 +661,8 @@ const htmlVersion = (d, intro, notes, signoff, show) => {
       escapeHtml(d.head.name || "delegate") +
       ",</td></tr>",
     '<tr><td style="padding-top:12px">' + paras(intro) + "</td></tr>",
+
+    paymentHtml(d, show),
 
     // The registration number is not repeated here: it has its own box above
     // and the footer carries it again.
@@ -650,7 +804,9 @@ const renderConfirmation = (row, content) => {
     venue: d.venue,
     dates: d.dates,
     contact: d.contact,
+    amount: d.price.amount != null ? formatPkr(d.price.amount) : "",
   };
+  d.instructions = fill(d.instructions, values);
 
   // Flattened again after filling, which also covers a line break pasted into
   // the subject field in the dashboard.
@@ -666,6 +822,42 @@ const renderConfirmation = (row, content) => {
     text: textVersion(d, intro, notes, signoff, show),
     html: htmlVersion(d, intro, notes, signoff, show),
   };
+};
+
+// ------------------------------------------------------------- attachments
+// The waiver and the head delegate form go out with the confirmation (owner,
+// 2026-10-22). They are the PDFs uploaded from the dashboard, which live in the
+// public event-forms bucket. Only that bucket is ever fetched, so a dashboard
+// field cannot make the server download from anywhere else, and each file is
+// fetched here first, so a slow or missing file costs that attachment, not the
+// email.
+const FORMS = [
+  ["docs.waiver", "RSIC waiver of liability.pdf"],
+  ["docs.head_form", "RSIC head delegate form.pdf"],
+];
+
+const formAttachments = async (content) => {
+  const base = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
+  const allowed = base + "/storage/v1/object/public/event-forms/";
+  const attachments = [];
+  const missing = [];
+  for (const [key, filename] of FORMS) {
+    const url = safeUrl((content && content[key]) || "");
+    if (!url || !base || !url.startsWith(allowed)) {
+      missing.push(filename);
+      continue;
+    }
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (!res.ok || buf.length > 8 * 1024 * 1024 || buf.subarray(0, 4).toString("latin1") !== "%PDF")
+        throw new Error("not a PDF");
+      attachments.push({ filename, content: buf, contentType: "application/pdf" });
+    } catch (_e) {
+      missing.push(filename);
+    }
+  }
+  return { attachments, missing };
 };
 
 // ------------------------------------------------------------------- send
@@ -705,6 +897,7 @@ const sendConfirmation = async (row, content) => {
     };
 
   const { subject, text, html } = renderConfirmation(row, c);
+  const { attachments, missing } = await formAttachments(c);
 
   try {
     const info = await getTransport().sendMail({
@@ -714,8 +907,15 @@ const sendConfirmation = async (row, content) => {
       subject,
       text,
       html,
+      attachments,
     });
-    return { ok: true, to, id: info.messageId };
+    return {
+      ok: true,
+      to,
+      id: info.messageId,
+      attached: attachments.map((a) => a.filename),
+      missing,
+    };
   } catch (err) {
     // An approval must never fail because a mail server was having a moment,
     // so the reason is handed back for the dashboard to show instead.
@@ -730,6 +930,9 @@ const sendConfirmation = async (row, content) => {
 module.exports = {
   sendConfirmation,
   renderConfirmation,
+  priceFor,
+  formatPkr,
+  formAttachments,
   mailConfigured,
   FIELD_GROUPS,
   ALL_FIELDS,
