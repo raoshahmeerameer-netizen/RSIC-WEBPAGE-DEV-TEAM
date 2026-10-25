@@ -311,7 +311,7 @@ const detailsOf = (row, content) => {
     bank: [
       ["Bank", setting(content, "payment.bank_name", "")],
       ["Account title", setting(content, "payment.account_title", "")],
-      ["Account number", setting(content, "payment.account_number", "")],
+      ["Account No.", setting(content, "payment.account_number", "")],
       ["IBAN", setting(content, "payment.iban", "")],
     ],
     instructions: String((content && content["payment.instructions"]) || "").trim(),
@@ -372,7 +372,9 @@ const textVersion = (d, intro, notes, signoff, show) => {
     }
     if (show("bank")) {
       d.bank.forEach((b) => lines.push(pair(true, b[0], b[1])));
-      if (d.instructions) lines.push("", d.instructions);
+      // the *stars* that make a phrase bold pink in the HTML are dropped here
+      if (d.instructions)
+        lines.push("", d.instructions.replace(/\*([^*\n]+)\*/g, "$1"));
     }
     block("Payment", lines);
   }
@@ -541,6 +543,43 @@ const numbered = (items, note) => {
   );
 };
 
+// The payment instructions stand out (owner, 2026-10-25): a pink-edged box
+// with a pink bar down the left, and a *phrase* in stars turns bold pink.
+// Everything is escaped before the stars are read, so nothing typed into the
+// dashboard can become markup. The tint is a solid colour because Outlook
+// ignores rgba backgrounds.
+const callout = (text) => {
+  const body = String(text)
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map(
+      (p) =>
+        '<p style="margin:0 0 12px;font-family:' +
+        SANS +
+        ";font-size:15px;line-height:1.65;color:" +
+        C.text +
+        '">' +
+        escapeHtml(p)
+          .replace(/\n/g, "<br />")
+          .replace(
+            /\*([^*\n]+)\*/g,
+            '<strong style="color:#e7a3b6;font-weight:700">$1</strong>',
+          ) +
+        "</p>",
+    )
+    .join("");
+  return body
+    ? '<tr><td style="padding-top:16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#2a2745;border:1px solid ' +
+        C.pink +
+        ";border-left:5px solid " +
+        C.pink +
+        ';border-radius:14px"><tr><td style="padding:16px 18px 6px">' +
+        body +
+        "</td></tr></table></td></tr>"
+    : "";
+};
+
 // The amount sits in its own box, the same shape as the registration number,
 // because it is the one figure the school has to act on.
 const paymentHtml = (d, show) => {
@@ -580,7 +619,7 @@ const paymentHtml = (d, show) => {
   if (show("bank")) {
     out += rows(d.bank);
     if (d.instructions)
-      out += '<tr><td style="padding-top:12px">' + paras(d.instructions) + "</td></tr>";
+      out += callout(d.instructions);
   }
   return out ? heading("Payment") + out : "";
 };
