@@ -1209,6 +1209,13 @@ app.use((req, res) => {
 // Last resort. NODE_ENV is not set on the host, so Express's own handler
 // would put a stack trace in front of a visitor. This one never does.
 app.use((err, req, res, _next) => {
+  // A malformed or oversized body is the client's mistake, not ours:
+  // body-parser marks those 400 or 413, so answer with that and skip the log.
+  const status = err && (err.status || err.statusCode);
+  if (status >= 400 && status < 500 && !res.headersSent)
+    return res
+      .status(status)
+      .json({ error: status === 413 ? "That was too large." : "Bad request." });
   console.error("unhandled:", (err && err.stack) || err);
   if (res.headersSent) return;
   if (req.path.startsWith("/api/"))
