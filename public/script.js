@@ -1562,10 +1562,12 @@ if (regForm) {
       submitBtn.disabled = !isOpen || !canSubmit();
     }
     if (regNote) {
-      const note = isOpen
-        ? content["registration.open_note"]
-        : content["registration.closed_note"];
-      if (note) rsicSetText(regNote, note);
+      // Point the note at whichever key it is showing, so the advanced
+      // editor opens the open note while registration is open rather than
+      // the closed one written into the HTML.
+      const key = isOpen ? "registration.open_note" : "registration.closed_note";
+      regNote.dataset.cms = key;
+      if (content[key]) rsicSetText(regNote, content[key]);
     }
   };
 

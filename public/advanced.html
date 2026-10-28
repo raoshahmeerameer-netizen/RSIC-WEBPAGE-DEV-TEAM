@@ -255,8 +255,8 @@
         }
         $("app").hidden = false;
 
-        const API = (p) =>
-          (location.hostname === "localhost" ? "http://localhost:5000" : "") + p;
+        // The same Express app serves this page and the API, on any port.
+        const API = (p) => p;
 
         const PAGES = [
           ["Home", "/"],
@@ -308,6 +308,9 @@
           ".logo", ".wm", "[data-countdown]", ".countdown-grid", ".hero h1",
           "#peopleList", "#realmTally", "#regStatus", "#delegatesHint",
           "#formsNone", ".lab-pattern", ".glyph", "svg",
+          "#regAmount", "button[type=submit]", ".lab-caption",
+          "[data-countdown-label]", "[data-early-bird-date]",
+          ".early-bird-closed", ".copy-mail",
         ].join(",");
 
         // The stored form of a piece of text: the words, with *stars* around
@@ -357,9 +360,16 @@
             const dressingOnly = kids.every(
               (k) => INLINE.has(k.tagName) && !k.children.length,
             );
-            const named = el.dataset && el.dataset.cms;
+            const named = el.dataset && (el.dataset.cms || el.dataset.cmsRich);
+            // A sentence holding a named field, like the early bird line with
+            // its fee inside, is not one piece: saving it whole would flatten
+            // the fee into plain text. Offer the named parts inside instead.
+            const holdsNamed = !named && el.querySelector("[data-cms]");
 
-            if ((named || (ownText && dressingOnly)) && el.textContent.trim()) {
+            if (
+              (named || (ownText && dressingOnly && !holdsNamed)) &&
+              el.textContent.trim()
+            ) {
               if (!el.querySelector("br")) {
                 const source = toSource(el);
                 found.push({
@@ -424,8 +434,31 @@
           $("advValue").focus();
         }
 
-        function wireFrame() {
-          const doc = $("advFrame").contentDocument;
+        // The page fills in its saved text and rewrites parts of itself only
+        // after load. Reading it before then labels pieces with the wrong key,
+        // so wait for its rsic:content signal, plus a beat for the handlers
+        // that run after it. If the backend is down the signal never comes.
+        function frameSettled(frame) {
+          return new Promise((resolve) => {
+            const win = frame.contentWindow;
+            const later = () => setTimeout(resolve, 300);
+            if (!win || win.RSIC_CONTENT) return later();
+            const timer = setTimeout(resolve, 4000);
+            win.document.addEventListener(
+              "rsic:content",
+              () => {
+                clearTimeout(timer);
+                later();
+              },
+              { once: true },
+            );
+          });
+        }
+
+        async function wireFrame() {
+          const frame = $("advFrame");
+          await frameSettled(frame);
+          const doc = frame.contentDocument;
           if (!doc) return;
 
           const style = doc.createElement("style");
