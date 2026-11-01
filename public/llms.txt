@@ -10,6 +10,7 @@ Schools register as a delegation of 5 to 7 delegates. A delegation enters 4 to 6
 - [About](https://cityrsic.com/about): why RSIC exists and the disciplines it covers
 - [Realms](https://cityrsic.com/realms): all eleven realms, with format and team size
 - [Register](https://cityrsic.com/register): the delegation form, downloadable forms and common questions
+- [Invitation](https://cityrsic.com/invitation): the organisers' invitation, page by page, with a PDF to download
 - [Experience](https://cityrsic.com/experience): what taking part is like
 - [Team](https://cityrsic.com/team): the Founders Council and the Executive Council's letter
 - [Code of Conduct](https://cityrsic.com/conduct): the Charter of Discipline
