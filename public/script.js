@@ -1367,12 +1367,14 @@ if (regForm) {
     core.forEach((b) =>
       b.closest(".realm-pick").classList.toggle("is-on", b.checked),
     );
-    if (submitBtn && isOpen) submitBtn.disabled = !canSubmit();
+    if (submitBtn && isOpen) submitBtn.disabled = false;
   };
 
-  const canSubmit = () => realmsOk() && delegatesOk() && peopleOk();
+  // The button stays clickable while registration is open. A greyed-out
+  // button gave no reason, and the list of what is missing only appears on a
+  // click, so a school that missed one field was left with a dead button.
   const paintSubmit = () => {
-    if (submitBtn && isOpen) submitBtn.disabled = !canSubmit();
+    if (submitBtn && isOpen) submitBtn.disabled = false;
   };
 
   optional.forEach((b) => b.addEventListener("change", paintTally));
@@ -1559,7 +1561,7 @@ if (regForm) {
     regForm.dataset.open = isOpen ? "yes" : "no";
     if (submitBtn) {
       submitBtn.textContent = isOpen ? "Register delegation ↗" : "Opens soon";
-      submitBtn.disabled = !isOpen || !canSubmit();
+      submitBtn.disabled = !isOpen;
     }
     if (regNote) {
       // Point the note at whichever key it is showing, so the advanced
@@ -1619,9 +1621,25 @@ if (regForm) {
         "a name, email, number, both CNICs and a photo for every other delegate",
       );
 
+    // the server refuses these, so catch them here where they can be fixed
+    const looksReal = (v) => /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(v);
+    [
+      ["s-school-email", "the school email"],
+      ["s-sup-email", "the supervisor's email"],
+      ["s-head-email", "the head delegate's email"],
+    ].forEach(([id, label]) => {
+      if (value(id) && !looksReal(value(id))) problems.push(label + " written correctly");
+    });
+    if (
+      delegatesOk() &&
+      peopleValues().some((p) => p.email && !looksReal(p.email))
+    )
+      problems.push("every delegate's email written correctly");
+
     if (problems.length) {
       regStatus.className = "reg-status is-bad";
       regStatus.textContent = "We still need " + problems.join(", ") + ".";
+      regStatus.scrollIntoView({ block: "center", behavior: "smooth" });
       return;
     }
 
@@ -1654,10 +1672,63 @@ if (regForm) {
 
     // files ride alongside the payload in one request, so nothing is stored
     // unless the whole registration is valid
+    // Phone photos are often over the 5 MB limit, and seven of them make a
+    // slow upload on mobile data. Each one is redrawn at 1600px as a JPEG,
+    // usually a few hundred KB. A photo the browser cannot decode goes as it
+    // is, and the server still checks its type and size.
+    const shrink = (f) =>
+      new Promise((resolve) => {
+        if (!f || !/^image\//.test(f.type)) return resolve(f);
+        const url = URL.createObjectURL(f);
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+          const c = document.createElement("canvas");
+          c.width = Math.round(img.naturalWidth * scale);
+          c.height = Math.round(img.naturalHeight * scale);
+          const g = c.getContext("2d");
+          g.fillStyle = "#fff";
+          g.fillRect(0, 0, c.width, c.height);
+          g.drawImage(img, 0, 0, c.width, c.height);
+          URL.revokeObjectURL(url);
+          c.toBlob(
+            (blob) =>
+              resolve(
+                blob && blob.size < f.size
+                  ? new File([blob], f.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" })
+                  : f,
+              ),
+            "image/jpeg",
+            0.85,
+          );
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve(f);
+        };
+        img.src = url;
+      });
+
+    // If anything goes wrong, say who to reach, so a school that gives up on
+    // the form still gets through to the organisers.
+    const reachUs = () => {
+      const c = window.RSIC_CONTENT || {};
+      const phone = c["contact.registration.phone"];
+      const email = c["contact.email"] || "raviscienceandinnovation@gmail.com";
+      return (
+        " If it keeps happening, " +
+        (phone ? "message us on WhatsApp at " + phone + " or " : "") +
+        "email " + email + "."
+      );
+    };
+
+    regStatus.textContent = "Preparing your photos...";
     const form = new FormData();
     form.append("payload", JSON.stringify(payload));
-    form.append("photoHead", file("s-head-photo"));
-    photoFiles.forEach((f, i) => f && form.append("photo" + i, f));
+    form.append("photoHead", await shrink(file("s-head-photo")));
+    const shrunk = await Promise.all(photoFiles.map(shrink));
+    shrunk.forEach((f, i) => f && form.append("photo" + i, f));
+    regStatus.textContent = "Sending...";
 
     try {
       const res = await fetch(rsicApi("/api/register"), {
@@ -1682,14 +1753,14 @@ if (regForm) {
       } else {
         regStatus.className = "reg-status is-bad";
         regStatus.textContent =
-          data.error || "That didn't go through. Check your details.";
+          (data.error || "That didn't go through. Check your details.") + reachUs();
       }
     } catch (err) {
       regStatus.className = "reg-status is-bad";
       regStatus.textContent =
-        "We couldn't reach the server. Try again in a moment.";
+        "We couldn't reach the server. Try again in a moment." + reachUs();
     } finally {
-      if (submitBtn) submitBtn.disabled = !isOpen || !canSubmit();
+      if (submitBtn) submitBtn.disabled = !isOpen;
     }
   });
 }

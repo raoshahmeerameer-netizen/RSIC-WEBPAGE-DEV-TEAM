@@ -538,18 +538,55 @@ const REALM_KEYS = [
   "psych","business","film","law","robotics",
 ];
 
-// Five registrations per address per hour.
-const postTries = new Map();
-const tooManyPosts = (ip) => {
+// Five registrations per address per hour, counting only ones that went
+// through. Refused attempts used to count too, so a school fixing a mistake,
+// or a whole school on one Wi-Fi, could lock itself out for an hour. Attempts
+// of any kind are capped far higher, which still stops a script.
+const postTries = new Map(); // registrations saved
+const attemptTries = new Map(); // every post
+const windowed = (map, ip, add) => {
   const now = Date.now();
-  const entry = postTries.get(ip) || { count: 0, until: now + 36e5 };
-  if (entry.until < now) {
-    entry.count = 0;
-    entry.until = now + 36e5;
+  let entry = map.get(ip);
+  if (!entry || entry.until < now) {
+    entry = { count: 0, until: now + 36e5 };
+    map.set(ip, entry);
   }
-  entry.count += 1;
-  postTries.set(ip, entry);
-  return entry.count > 5;
+  if (add) entry.count += 1;
+  return entry.count;
+};
+
+// A refused registration is saved with its reason, so a school that tries,
+// gives up and goes quiet still reaches the organisers (owner, 2026-11-01).
+// Both dashboards list these. It never holds up the response, and a post with
+// nothing to contact anyone by (a bot, an empty probe) is only logged.
+const recordAttempt = (body, reason) => {
+  let b = body || {};
+  if (typeof b.payload === "string") {
+    try {
+      b = { ...b, ...JSON.parse(b.payload) };
+    } catch (e) {}
+  }
+  const t = (v, n) => (v == null || String(v).trim() === "" ? null : String(v).trim().slice(0, n));
+  const head = b.headDelegate || {};
+  const row = {
+    school: t(b.school, 160),
+    team_name: t(b.teamName, 120),
+    supervisor_name: t(b.supervisorName, 120),
+    supervisor_email: t(b.supervisorEmail || b.contactEmail, 160),
+    supervisor_phone: t(b.supervisorPhone || b.phone, 40),
+    head_name: t(head.name, 120),
+    head_phone: t(head.phone, 40),
+    delegates: Number.isFinite(parseInt(b.delegates, 10)) ? parseInt(b.delegates, 10) : null,
+    reason: t(reason, 300) || "Unknown",
+  };
+  console.warn("registration refused:", row.reason);
+  if (!row.school && !row.supervisor_email && !row.supervisor_phone && !row.head_phone) return;
+  supabase
+    .from("registration_attempts")
+    .insert([row])
+    .then(({ error }) => {
+      if (error) console.error("attempt:", error.message);
+    });
 };
 
 // These maps held one entry per address for the life of the process. Sweep
@@ -558,10 +595,18 @@ setInterval(() => {
   const now = Date.now();
   for (const [k, v] of loginTries) if (v.until < now) loginTries.delete(k);
   for (const [k, v] of postTries) if (v.until < now) postTries.delete(k);
+  for (const [k, v] of attemptTries) if (v.until < now) attemptTries.delete(k);
   for (const [t, s] of sessions) if (s.expires < now) sessions.delete(t);
 }, 6e5).unref();
 
 app.post("/api/register", upload.any(), async (req, res) => {
+  // every refusal below goes out through res.json, so this is the one place
+  // that sees them all and records the attempt
+  const send = res.json.bind(res);
+  res.json = (body) => {
+    if (res.statusCode >= 400) recordAttempt(req.body, body && body.error);
+    return send(body);
+  };
   try {
     // the form sends everything else as one JSON field alongside the files
     if (typeof req.body.payload === "string") {
@@ -597,7 +642,7 @@ app.post("/api/register", upload.any(), async (req, res) => {
         .json({ error: "Just a moment, that was sent twice." });
     // A delegation registers once. Without a ceiling, one script could fill
     // the table and push tens of megabytes of photos into storage.
-    if (tooManyPosts(req.ip))
+    if (windowed(attemptTries, req.ip, true) > 30 || windowed(postTries, req.ip, false) >= 5)
       return res.status(429).json({
         error: "That is a lot of registrations from one place. Try again later.",
       });
@@ -794,6 +839,7 @@ app.post("/api/register", upload.any(), async (req, res) => {
     }
 
     lastPost.set(req.ip, now);
+    windowed(postTries, req.ip, true);
     res.json({
       message: content["registration.thanks"] || "Registration received.",
     });
@@ -806,6 +852,26 @@ app.post("/api/register", upload.any(), async (req, res) => {
 });
 
 // ---------------------------------------------------------------- admin data
+// Registrations the server refused, newest first, for both dashboards to
+// follow up. Dismissing one deletes it once someone has been in touch.
+app.get("/api/registration-attempts", requireStaff, async (_req, res) => {
+  const { data, error } = await supabase
+    .from("registration_attempts")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ data });
+});
+
+app.delete("/api/registration-attempts/:id", requireStaff, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: "Bad id." });
+  const { error } = await supabase.from("registration_attempts").delete().eq("id", id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 app.get("/api/registrations", requireStaff, async (_req, res) => {
   const { data, error } = await supabase
     .from("registrations")
@@ -1098,12 +1164,14 @@ app.delete("/api/admin/guide", requireAdmin, async (req, res) => {
 });
 
 // multer's own errors are not friendly, so translate the ones people hit
-app.use((err, _req, res, next) => {
+app.use((err, req, res, next) => {
   if (err && err.name === "MulterError") {
     const msg =
       err.code === "LIMIT_FILE_SIZE"
         ? "That file is too big. Each file must be 5 MB or less."
         : "There was a problem with the files you attached.";
+    // multer stops before the route runs, so record the attempt here
+    if (req.path === "/api/register") recordAttempt(req.body, msg);
     return res.status(400).json({ error: msg });
   }
   return next(err);

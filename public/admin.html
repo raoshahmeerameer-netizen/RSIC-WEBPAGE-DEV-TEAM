@@ -477,7 +477,7 @@
       <div class="admin-wrap">
         <!-- the switch -->
                 <nav class="panel-tabs" id="panelTabs" aria-label="Dashboard sections">
-          <button class="panel-tab active" type="button" data-panels="panel-switch panel-numbers panel-regs panel-breakdown">Registrations</button>
+          <button class="panel-tab active" type="button" data-panels="panel-switch panel-numbers panel-regs panel-attempts panel-breakdown">Registrations</button>
           <button class="panel-tab" type="button" data-panels="panel-text">Site text</button>
           <button class="panel-tab" type="button" data-panels="panel-guides">Study guides</button>
           <button class="panel-tab" type="button" data-panels="panel-forms">Event forms</button>
@@ -564,6 +564,36 @@
             </table>
           </div>
           <p class="admin-msg" id="tableMsg"></p>
+        </section>
+
+        <!-- registrations the server refused, so nobody who tried is lost -->
+        <section class="panel" id="panel-attempts" aria-label="Attempts that did not go through">
+          <div class="section-head">
+            <div>
+              <p class="label">Tried to register but didn't finish</p>
+              <h2>Follow <em>up.</em></h2>
+            </div>
+            <p>Every registration the site refused, with the reason it gave. Call or email them, then dismiss it.</p>
+          </div>
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">When</th>
+                  <th scope="col">School</th>
+                  <th scope="col">Contact</th>
+                  <th scope="col">What went wrong</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="attemptsBody">
+                <tr>
+                  <td colspan="5">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="admin-msg" id="attemptsMsg"></p>
         </section>
 
         <!-- realm breakdown -->
@@ -704,7 +734,7 @@
       </form>
     </div>
 
-    <script src="/script.js?v=2207c48161" defer></script>
+    <script src="/script.js?v=09529c6e8c" defer></script>
     <script>
       (() => {
         // ---------------------------------------------------------- setup
@@ -850,7 +880,68 @@
           return tr;
         }
 
+        // Registrations the server refused. Built with textContent like the
+        // main table, because every value here was typed into the public form.
+        async function loadAttempts() {
+          const body = $("attemptsBody");
+          try {
+            const data = await request("/api/registration-attempts");
+            const list = data.data || [];
+            $("attemptsMsg").textContent = "";
+            if (!list.length)
+              return body.replaceChildren(
+                cell("None. Every registration so far went through.", 5),
+              );
+            body.replaceChildren(
+              ...list.map((a) => {
+                const tr = document.createElement("tr");
+                const td = (lines) => {
+                  const c = document.createElement("td");
+                  lines.filter(Boolean).forEach((t, i) => {
+                    if (i) c.append(document.createElement("br"));
+                    c.append(document.createTextNode(t));
+                  });
+                  return c;
+                };
+                const when = new Date(a.created_at).toLocaleString("en-GB", {
+                  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                  timeZone: "Asia/Karachi",
+                });
+                const act = document.createElement("td");
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "action-btn ghost";
+                btn.textContent = "Dismiss";
+                btn.addEventListener("click", async () => {
+                  btn.disabled = true;
+                  try {
+                    await request("/api/registration-attempts/" + a.id, { method: "DELETE" });
+                    loadAttempts();
+                  } catch (err) {
+                    btn.disabled = false;
+                    say($("attemptsMsg"), err.message, false);
+                  }
+                });
+                act.append(btn);
+                tr.append(
+                  td([when]),
+                  td([a.school || "No school given", a.team_name && "Team: " + a.team_name,
+                    a.delegates && a.delegates + " delegates"]),
+                  td([a.supervisor_name, a.supervisor_phone, a.supervisor_email,
+                    a.head_name && "Head: " + a.head_name + (a.head_phone ? ", " + a.head_phone : "")]),
+                  td([a.reason]),
+                  act,
+                );
+                return tr;
+              }),
+            );
+          } catch (err) {
+            body.replaceChildren(cell("Could not load these. " + err.message, 5));
+          }
+        }
+
         async function loadRegistrations() {
+          loadAttempts();
           try {
             const data = await request("/api/registrations");
             rows = data.data || [];
