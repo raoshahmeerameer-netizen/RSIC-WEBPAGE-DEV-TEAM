@@ -74,7 +74,7 @@ const DEFAULT_SUBJECT =
 const DEFAULT_INTRO = [
   "Your delegation's registration for RSIC 2026 is confirmed.",
   "Your registration number is {reg_no}. Please quote it in any correspondence with us, and keep it with you on the day.",
-  "To complete your registration, please transfer the amount set out below. The details we hold for your delegation follow it. Please check them.",
+  "To complete your registration, please pay the amount set out below in cash, as explained under it. The details we hold for your delegation follow. Please check them.",
 ].join("\n\n");
 
 const DEFAULT_NOTES = [
@@ -161,8 +161,8 @@ const FIELD_GROUPS = [
     id: "payment",
     title: "Payment",
     fields: [
-      ["amount", "Amount to transfer, and how it is worked out"],
-      ["bank", "Bank details and payment instructions"],
+      ["amount", "Amount to pay, and how it is worked out"],
+      ["bank", "How to pay (cash only)"],
     ],
   },
   {
@@ -306,14 +306,6 @@ const detailsOf = (row, content) => {
     contact: setting(content, "contact.email", FALLBACK.contact),
     map: safeUrl(setting(content, "event.map_url", FALLBACK.map)),
     price: priceFor(row, content),
-    // The organisers fill these in from the dashboard. Any left blank are
-    // simply not shown.
-    bank: [
-      ["Bank", setting(content, "payment.bank_name", "")],
-      ["Account title", setting(content, "payment.account_title", "")],
-      ["Account No.", setting(content, "payment.account_number", "")],
-      ["IBAN", setting(content, "payment.iban", "")],
-    ],
     instructions: String((content && content["payment.instructions"]) || "").trim(),
   };
 };
@@ -365,13 +357,12 @@ const textVersion = (d, intro, notes, signoff, show) => {
     if (show("amount")) {
       lines.push(
         p.amount != null
-          ? pair(true, "Amount to transfer", formatPkr(p.amount))
+          ? pair(true, "Amount to pay", formatPkr(p.amount))
           : "  The amount will be confirmed to you separately.",
       );
       if (p.amount != null && priceLine(p)) lines.push("  " + priceLine(p));
     }
     if (show("bank")) {
-      d.bank.forEach((b) => lines.push(pair(true, b[0], b[1])));
       // the *stars* that make a phrase bold pink in the HTML are dropped here
       if (d.instructions)
         lines.push("", d.instructions.replace(/\*([^*\n]+)\*/g, "$1"));
@@ -595,7 +586,7 @@ const paymentHtml = (d, show) => {
           SANS +
           ";font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:" +
           C.soft +
-          '">Amount to transfer<div style="font-family:' +
+          '">Amount to pay<div style="font-family:' +
           SERIF +
           ";font-size:26px;color:" +
           C.pink +
@@ -617,7 +608,6 @@ const paymentHtml = (d, show) => {
           "</td></tr>";
   }
   if (show("bank")) {
-    out += rows(d.bank);
     if (d.instructions)
       out += callout(d.instructions);
   }
@@ -955,10 +945,6 @@ const sendConfirmation = async (row, content) => {
       id: info.messageId,
       attached: attachments.map((a) => a.filename),
       missing,
-      // Blank bank fields are left out of the email, so the dashboard warns
-      // when a bill went out without anywhere to send the money.
-      noBank: !["payment.bank_name", "payment.account_title", "payment.account_number", "payment.iban"]
-        .some((k) => oneLine(c[k] || "")),
     };
   } catch (err) {
     // An approval must never fail because a mail server was having a moment,

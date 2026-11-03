@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=51cd638ead" />
+    <link rel="stylesheet" href="/styles.css?v=7cb7812762" />
 
     <style>
       .admin-wrap {
@@ -734,7 +734,7 @@
       </form>
     </div>
 
-    <script src="/script.js?v=09529c6e8c" defer></script>
+    <script src="/script.js?v=cd47dc7400" defer></script>
     <script>
       (() => {
         // ---------------------------------------------------------- setup
@@ -1161,16 +1161,13 @@
             else if (mail.ok)
               say(
                 $("tableMsg"),
-                "Confirmed. Email with the amount and bank details sent to " +
+                "Confirmed. Email with the amount and how to pay sent to " +
                   mail.to.join(" and ") +
                   (mail.missing && mail.missing.length
                     ? ". Not attached, because it is not uploaded or could not be fetched: " +
                       mail.missing.join(", ")
-                    : ", with both forms attached.") +
-                  (mail.noBank
-                    ? " Warning: the bank details are blank in Site text → Payment details, so the email had no bank details. Fill them in and use Resend email."
-                    : ""),
-                !mail.noBank,
+                    : ", with both forms attached."),
+                true,
               );
             else if (mail.skipped)
               say($("tableMsg"), "Confirmed. " + mail.error, true);
@@ -1190,7 +1187,7 @@
           n == null ? "" : "PKR " + Number(n).toLocaleString("en-US");
 
         // Payment is marked separately from the confirmation, from either
-        // dashboard, once the transfer arrives.
+        // dashboard, once the delegation has paid in cash at the campus.
         async function setPayment(row, payment, btn) {
           btn.disabled = true;
           try {
