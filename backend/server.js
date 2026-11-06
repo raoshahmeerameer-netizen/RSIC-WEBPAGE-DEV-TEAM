@@ -19,6 +19,8 @@ const {
   ALL_FIELDS,
   MAIL_USER,
   MAIL_REPLY_TO,
+  sendBonfire,
+  renderBonfire,
 } = require("./mail");
 
 // ---------------------------------------------------------------- config
@@ -596,6 +598,8 @@ setInterval(() => {
   for (const [k, v] of loginTries) if (v.until < now) loginTries.delete(k);
   for (const [k, v] of postTries) if (v.until < now) postTries.delete(k);
   for (const [k, v] of attemptTries) if (v.until < now) attemptTries.delete(k);
+  for (const m of [bonfireSaved, bonfireTries])
+    for (const [k, v] of m) if (v.until < now) m.delete(k);
   for (const [t, s] of sessions) if (s.expires < now) sessions.delete(t);
 }, 6e5).unref();
 
@@ -849,6 +853,171 @@ app.post("/api/register", upload.any(), async (req, res) => {
     console.error("register:", err.message);
     res.status(500).json({ error: "Something went wrong. Try again." });
   }
+});
+
+// ---------------------------------------------------------------- bonfire
+// Spooky Bonfire bookings (owner, 2026-11-06). For now the page is information
+// only: bonfire.open is the one switch, flipped from the dashboard's Bonfire
+// tab, and while it is off this route refuses every booking and no ticket
+// email goes out. When it is on, RSIC delegates and guests from outside both
+// book and pay on the spot; a booking stays Pending until either dashboard
+// confirms it, which emails the ticket, and payment is marked when the money
+// is taken.
+const bonfireSaved = new Map();
+const bonfireTries = new Map();
+const ticketLabel = (n) => "B" + String(n).padStart(3, "0");
+const numberIn = (s) => {
+  const n = parseInt(String(s || "").replace(/[^\d]/g, ""), 10);
+  return Number.isFinite(n) ? n : null;
+};
+
+app.post("/api/bonfire", async (req, res) => {
+  try {
+    const content = await loadContent();
+    if ((content["bonfire.open"] || "off").toLowerCase() !== "on")
+      return res.status(403).json({ error: "Bonfire bookings aren't open." });
+    if (
+      windowed(bonfireTries, req.ip, true) > 30 ||
+      windowed(bonfireSaved, req.ip, false) >= 10
+    )
+      return res.status(429).json({
+        error: "That is a lot of bookings from one place. Try again later.",
+      });
+
+    const b = req.body || {};
+    const t = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
+    const name = t(b.name, 120);
+    const email = t(b.email, 160);
+    const phone = t(b.phone, 40);
+    const school = t(b.school, 160);
+    const attendee = ["delegate", "outsider"].includes(b.attendee) ? b.attendee : "";
+    const max = Math.min(20, Math.max(1, numberIn(content["bonfire.max_per_booking"]) || 5));
+    const quantity = parseInt(b.quantity, 10);
+    const refuse = (msg) => res.status(400).json({ error: msg });
+    if (!name) return refuse("Your name is required.");
+    if (!emailLooksReal(email)) return refuse("That email doesn't look right.");
+    if (!phone) return refuse("A phone number is required.");
+    if (!attendee) return refuse("Say whether you're an RSIC delegate or a guest.");
+    if (attendee === "delegate" && !school)
+      return refuse("Delegates need to give their delegation's school.");
+    if (!Number.isFinite(quantity) || quantity < 1 || quantity > max)
+      return refuse("Choose between 1 and " + max + " tickets.");
+
+    const price = numberIn(content["bonfire.price"]);
+    const { data, error } = await supabase
+      .from("bonfire_tickets")
+      .insert([
+        {
+          name,
+          email,
+          phone,
+          attendee_type: attendee,
+          school: school || null,
+          quantity,
+          amount_due: price == null ? null : price * quantity,
+        },
+      ])
+      .select("ticket_no")
+      .single();
+    if (error) {
+      console.error("bonfire insert:", error.message);
+      return res.status(500).json({ error: "Could not save your booking." });
+    }
+    windowed(bonfireSaved, req.ip, true);
+    res.json({
+      message: content["bonfire.thanks"] || "Booked.",
+      ticket: ticketLabel(data.ticket_no),
+    });
+  } catch (err) {
+    console.error("bonfire:", err.message);
+    res.status(500).json({ error: "Something went wrong. Try again." });
+  }
+});
+
+app.get("/api/bonfire-tickets", requireStaff, async (_req, res) => {
+  const { data, error } = await supabase
+    .from("bonfire_tickets")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ data });
+});
+
+app.patch("/api/bonfire-tickets/:id", requireStaff, async (req, res) => {
+  const { status, payment } = req.body || {};
+  const resend = Boolean(req.body && req.body.resend);
+  const { data: row, error: readError } = await supabase
+    .from("bonfire_tickets")
+    .select("*")
+    .eq("id", req.params.id)
+    .maybeSingle();
+  if (readError) return res.status(500).json({ error: readError.message });
+  if (!row) return res.status(404).json({ error: "No such booking." });
+
+  if (payment !== undefined) {
+    if (!["Pending", "Received"].includes(payment))
+      return res.status(400).json({ error: "Payment must be Pending or Received." });
+    const { error } = await supabase
+      .from("bonfire_tickets")
+      .update({
+        payment_status: payment,
+        payment_received_at: payment === "Received" ? new Date().toISOString() : null,
+      })
+      .eq("id", row.id);
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ ok: true, payment });
+  }
+
+  if (!["Pending", "Confirmed"].includes(status))
+    return res.status(400).json({ error: "Status must be Pending or Confirmed." });
+  const wasConfirmed = row.status === "Confirmed";
+  const update = { status };
+  if (status === "Confirmed" && !wasConfirmed) update.confirmed_at = new Date().toISOString();
+  const { error } = await supabase.from("bonfire_tickets").update(update).eq("id", row.id);
+  if (error) return res.status(500).json({ error: error.message });
+
+  // Same rule as delegations: confirming emails the ticket once, Resend asks
+  // for it again, and a mail server having a moment never undoes the confirm.
+  let mail = null;
+  if (status === "Confirmed" && (!wasConfirmed || resend)) {
+    let content = {};
+    try {
+      content = await loadContent();
+    } catch (_e) {}
+    mail = await sendBonfire({ ...row, ...update }, content);
+    if (!mail.ok)
+      console.error("Bonfire email failed for " + ticketLabel(row.ticket_no) + ": " + mail.error);
+  }
+  res.json({ ok: true, mail });
+});
+
+app.delete("/api/bonfire-tickets/:id", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: "Bad id." });
+  const { error } = await supabase.from("bonfire_tickets").delete().eq("id", id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// A preview of the ticket email, for the dashboard, against a made-up booking.
+app.get("/api/admin/bonfire-email-preview", requireStaff, async (_req, res) => {
+  const content = await loadContent();
+  const price = numberIn(content["bonfire.price"]);
+  res.json(
+    renderBonfire(
+      {
+        ticket_no: 1,
+        name: "Ayesha Khan",
+        email: "ayesha@example.com",
+        phone: "0300 1234567",
+        attendee_type: "outsider",
+        school: "Lahore Grammar School",
+        quantity: 2,
+        amount_due: price == null ? null : price * 2,
+      },
+      content,
+    ),
+  );
 });
 
 // ---------------------------------------------------------------- admin data

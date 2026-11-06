@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=7cb7812762" />
+    <link rel="stylesheet" href="/styles.css?v=6c7558c1e5" />
 
     <style>
       .admin-wrap {
@@ -478,6 +478,7 @@
         <!-- the switch -->
                 <nav class="panel-tabs" id="panelTabs" aria-label="Dashboard sections">
           <button class="panel-tab active" type="button" data-panels="panel-switch panel-numbers panel-regs panel-attempts panel-breakdown">Registrations</button>
+          <button class="panel-tab" type="button" data-panels="panel-bonfire">Bonfire</button>
           <button class="panel-tab" type="button" data-panels="panel-text">Site text</button>
           <button class="panel-tab" type="button" data-panels="panel-guides">Study guides</button>
           <button class="panel-tab" type="button" data-panels="panel-forms">Event forms</button>
@@ -594,6 +595,46 @@
             </table>
           </div>
           <p class="admin-msg" id="attemptsMsg"></p>
+        </section>
+
+        <!-- Spooky Bonfire: the one switch, then bookings -->
+        <section class="panel" id="panel-bonfire" aria-label="Spooky Bonfire">
+          <div class="section-head">
+            <div>
+              <p class="label">Spooky Bonfire</p>
+              <h2>Bonfire <em>bookings.</em></h2>
+            </div>
+            <p>The page's words, price and the ticket email's wording are under Site text, in the Spooky Bonfire and Bonfire ticket email groups.</p>
+          </div>
+          <div class="toolbar">
+            <button class="action-btn" type="button" id="bonfireToggle">Loading…</button>
+            <a class="action-btn ghost" href="/bonfire" target="_blank" rel="noopener">Open the page</a>
+          </div>
+          <p class="admin-msg" id="bonfireState"></p>
+          <p class="row-sub" id="bonfireSummary"></p>
+          <div class="toolbar">
+            <button class="action-btn ghost" type="button" id="bonfireRefresh">Refresh</button>
+            <button class="action-btn ghost" type="button" id="bonfireXlsx">Export Excel</button>
+          </div>
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th scope="col">No.</th>
+                  <th scope="col">Who</th>
+                  <th scope="col">Tickets</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bonfireBody">
+                <tr>
+                  <td colspan="5">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="admin-msg" id="bonfireMsg"></p>
         </section>
 
         <!-- realm breakdown -->
@@ -734,7 +775,7 @@
       </form>
     </div>
 
-    <script src="/script.js?v=cd47dc7400" defer></script>
+    <script src="/script.js?v=070f7978ef" defer></script>
     <script>
       (() => {
         // ---------------------------------------------------------- setup
@@ -940,8 +981,188 @@
           }
         }
 
+        // ---------------------------------------------------------- bonfire
+        // One switch turns the booking form and the ticket emails on or off
+        // together (owner, 2026-11-07). Off, the page is information only.
+        let bonfireOn = false;
+        const paintBonfireSwitch = () => {
+          $("bonfireToggle").textContent = bonfireOn
+            ? "Turn bookings and emails off"
+            : "Turn bookings and emails on";
+          say(
+            $("bonfireState"),
+            bonfireOn
+              ? "On: the booking form is showing on /bonfire, and confirming a booking emails the ticket."
+              : "Off: the page is information only. No form, no bookings, no ticket emails.",
+            bonfireOn,
+          );
+        };
+        async function loadBonfireSwitch() {
+          try {
+            const res = await fetch(api("/api/content"));
+            const d = await res.json();
+            bonfireOn = String((d.content || {})["bonfire.open"] || "off").toLowerCase() === "on";
+          } catch (_e) {}
+          paintBonfireSwitch();
+        }
+        if (REGI) $("bonfireToggle").style.display = "none";
+        $("bonfireToggle").addEventListener("click", async () => {
+          const next = bonfireOn ? "off" : "on";
+          if (next === "on" && !confirm("Show the booking form on the Bonfire page and send ticket emails?")) return;
+          $("bonfireToggle").disabled = true;
+          try {
+            await request("/api/content", {
+              method: "PATCH",
+              body: JSON.stringify({ updates: { "bonfire.open": next } }),
+            });
+            bonfireOn = next === "on";
+            paintBonfireSwitch();
+          } catch (err) {
+            say($("bonfireState"), err.message, false);
+          } finally {
+            $("bonfireToggle").disabled = false;
+          }
+        });
+
+        // Bookings. Built with textContent, because every value here was typed
+        // into the public booking form.
+        let bonfireRows = [];
+        const ticketNo = (r) => "B" + String(r.ticket_no || r.id).padStart(3, "0");
+        async function bonfireAct(row, body, btn, done) {
+          btn.disabled = true;
+          try {
+            const res = await request("/api/bonfire-tickets/" + row.id, {
+              method: "PATCH",
+              body: JSON.stringify(body),
+            });
+            const m = res.mail;
+            if (!m) say($("bonfireMsg"), done, true);
+            else if (m.ok) say($("bonfireMsg"), "Confirmed. Ticket emailed to " + m.to.join(", ") + ".", true);
+            else if (m.skipped) say($("bonfireMsg"), "Confirmed. " + m.error, true);
+            else say($("bonfireMsg"), "Confirmed, but the email did not send. " + m.error, false);
+            loadBonfire();
+          } catch (err) {
+            btn.disabled = false;
+            say($("bonfireMsg"), err.message, false);
+          }
+        }
+        async function loadBonfire() {
+          loadBonfireSwitch();
+          const body = $("bonfireBody");
+          try {
+            const data = await request("/api/bonfire-tickets");
+            bonfireRows = data.data || [];
+            const tickets = bonfireRows.reduce((n, r) => n + (r.quantity || 0), 0);
+            const paid = bonfireRows.filter((r) => r.payment_status === "Received");
+            const taken = paid.reduce((n, r) => n + (r.amount_due || 0), 0);
+            $("bonfireSummary").textContent =
+              bonfireRows.length + " bookings, " + tickets + " tickets. " +
+              bonfireRows.filter((r) => r.status === "Confirmed").length + " confirmed, " +
+              paid.length + " paid (" + pkr(taken || 0) + " taken).";
+            if (!bonfireRows.length)
+              return body.replaceChildren(cell("No bookings yet.", 5));
+            body.replaceChildren(
+              ...bonfireRows.map((r) => {
+                const tr = document.createElement("tr");
+                const td = (lines) => {
+                  const c = document.createElement("td");
+                  lines.filter(Boolean).forEach((t, i) => {
+                    if (i) c.append(document.createElement("br"));
+                    c.append(document.createTextNode(t));
+                  });
+                  return c;
+                };
+                const confirmed = r.status === "Confirmed";
+                const isPaid = r.payment_status === "Received";
+                const st = document.createElement("td");
+                const badge = document.createElement("span");
+                badge.className = "status-badge " + (confirmed ? "confirmed" : "pending");
+                badge.textContent = r.status;
+                const pay = document.createElement("span");
+                pay.className = "status-badge pay " + (isPaid ? "confirmed" : "pending");
+                pay.textContent = isPaid ? "Paid" : "Not paid";
+                st.append(badge, pay);
+
+                const act = document.createElement("td");
+                const wrap = document.createElement("div");
+                wrap.className = "row-actions";
+                const button = (label, ghost, fn) => {
+                  const b = document.createElement("button");
+                  b.type = "button";
+                  b.className = "action-btn" + (ghost ? " ghost" : "");
+                  b.textContent = label;
+                  b.addEventListener("click", () => fn(b));
+                  wrap.append(b);
+                };
+                button(confirmed ? "Set pending" : "Confirm & email", false, (b) =>
+                  bonfireAct(r, { status: confirmed ? "Pending" : "Confirmed" }, b, "Set back to pending."),
+                );
+                if (confirmed)
+                  button("Resend email", true, (b) => bonfireAct(r, { status: "Confirmed", resend: true }, b, ""));
+                button(isPaid ? "Mark not paid" : "Mark paid", true, (b) =>
+                  bonfireAct(r, { payment: isPaid ? "Pending" : "Received" }, b, isPaid ? "Marked not paid." : "Marked paid."),
+                );
+                if (!REGI)
+                  button("Delete", true, async (b) => {
+                    if (!confirm("Delete booking " + ticketNo(r) + " for " + r.name + "?")) return;
+                    b.disabled = true;
+                    try {
+                      await request("/api/bonfire-tickets/" + r.id, { method: "DELETE" });
+                      say($("bonfireMsg"), "Deleted " + ticketNo(r) + ".", true);
+                      loadBonfire();
+                    } catch (err) {
+                      b.disabled = false;
+                      say($("bonfireMsg"), err.message, false);
+                    }
+                  });
+                act.append(wrap);
+
+                const when = new Date(r.created_at).toLocaleString("en-GB", {
+                  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                  timeZone: "Asia/Karachi",
+                });
+                tr.append(
+                  td([ticketNo(r), when]),
+                  td([r.name, r.phone, r.email,
+                    (r.attendee_type === "delegate" ? "RSIC delegate" : "Guest") + (r.school ? ", " + r.school : "")]),
+                  td([String(r.quantity), r.amount_due != null ? pkr(r.amount_due) : ""]),
+                  st,
+                  act,
+                );
+                return tr;
+              }),
+            );
+          } catch (err) {
+            body.replaceChildren(cell("Could not load bookings. " + err.message, 5));
+          }
+        }
+        $("bonfireRefresh").addEventListener("click", loadBonfire);
+        $("bonfireXlsx").addEventListener("click", async () => {
+          try {
+            await ensureXlsx();
+            const head = ["No.", "Booked", "Name", "Email", "Phone", "Coming as", "School or institute", "Tickets", "Amount (PKR)", "Status", "Payment"];
+            const data = bonfireRows.map((r) => [
+              ticketNo(r),
+              new Date(r.created_at).toISOString().slice(0, 16).replace("T", " "),
+              r.name, r.email, r.phone,
+              r.attendee_type === "delegate" ? "RSIC delegate" : "Guest",
+              r.school || "", String(r.quantity),
+              r.amount_due != null ? String(r.amount_due) : "",
+              r.status, r.payment_status === "Received" ? "Paid" : "Not paid",
+            ]);
+            const ws = XLSX.utils.aoa_to_sheet([head, ...data].map((row) => row.map((v) => ({ t: "s", v: String(v) }))));
+            ws["!cols"] = head.map((h, i) => ({ wch: Math.min(46, Math.max(10, ...[h, ...data.map((d) => d[i])].map((v) => String(v).length + 2))) }));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Bonfire");
+            XLSX.writeFile(wb, "rsic-bonfire-bookings.xlsx");
+          } catch (err) {
+            say($("bonfireMsg"), err.message, false);
+          }
+        });
+
         async function loadRegistrations() {
           loadAttempts();
+          loadBonfire();
           try {
             const data = await request("/api/registrations");
             rows = data.data || [];
@@ -2421,6 +2642,7 @@
           "Page: Team": "/team", "Page: Code of Conduct": "/conduct",
           "Page: Updates": "/updates", "Page: Media": "/media",
           "Page: Register": "/register", Team: "/team", Registration: "/register",
+          "Spooky Bonfire": "/bonfire", "Bonfire ticket email": "/bonfire",
           "Registration rules": "/register", Fees: "/register", Event: "/",
         };
         function previewFor(category, items) {

@@ -1871,3 +1871,128 @@ if (regForm) {
     a.insertAdjacentElement("afterend", btn);
   });
 })();
+
+// ---------------------------------------------------------------- bonfire
+// The Spooky Bonfire booking form (owner, 2026-11-06). For now the page is
+// information only: the form and its button stay hidden until bonfire.open is
+// switched on from the dashboard's Bonfire tab, and the server refuses
+// bookings while it is off. RSIC delegates and guests from outside both book,
+// and pay on the spot. The price and the most tickets one booking can take
+// come from the dashboard too, and the server checks them again.
+const bonfireForm = document.getElementById("bonfireBooking");
+if (bonfireForm) {
+  const section = document.getElementById("book");
+  const cta = document.getElementById("bonfireBookCta");
+  const status = document.getElementById("bonfireStatus");
+  const btn = bonfireForm.querySelector('button[type="submit"]');
+  const qty = document.getElementById("b-qty");
+  const amountBox = document.getElementById("bonfireAmount");
+  const picks = [...bonfireForm.querySelectorAll('input[name="attendee"]')];
+  let open = false;
+  let price = null;
+  let content = {};
+
+  const moneyOf = (s) => {
+    const n = parseInt(String(s || "").replace(/[^\d]/g, ""), 10);
+    return Number.isFinite(n) ? n : null;
+  };
+  const pkrOf = (n) => "PKR " + Number(n).toLocaleString("en-US");
+  const value = (id) => document.getElementById(id).value.trim();
+  const picked = () => (picks.find((p) => p.checked) || {}).value || "";
+
+  const paintAmount = () => {
+    if (price == null) return (amountBox.hidden = true);
+    const n = parseInt(qty.value, 10) || 1;
+    amountBox.hidden = false;
+    document.getElementById("bonfireTotal").textContent = pkrOf(n * price);
+    document.getElementById("bonfireHow").textContent =
+      n + (n === 1 ? " ticket" : " tickets") + " × " + pkrOf(price) + ". Paid on the spot.";
+  };
+
+  picks.forEach((p) =>
+    p.addEventListener("change", () =>
+      picks.forEach((q) => q.closest(".realm-pick").classList.toggle("is-on", q.checked)),
+    ),
+  );
+  qty.addEventListener("change", paintAmount);
+
+  rsicContentReady.then((c) => {
+    if (!c) return;
+    content = c;
+    open = String(c["bonfire.open"] || "off").toLowerCase() === "on";
+    section.hidden = cta.hidden = !open;
+    if (!open) return;
+    price = moneyOf(c["bonfire.price"]);
+    const max = Math.min(20, Math.max(1, moneyOf(c["bonfire.max_per_booking"]) || 5));
+    qty.replaceChildren(
+      ...Array.from({ length: max }, (_, i) => {
+        const o = document.createElement("option");
+        o.value = o.textContent = String(i + 1);
+        return o;
+      }),
+    );
+    btn.disabled = false;
+    paintAmount();
+  });
+
+  bonfireForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!open) return;
+    const looksReal = (v) => /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(v);
+    const problems = [];
+    if (!value("b-name")) problems.push("your name");
+    if (!looksReal(value("b-email"))) problems.push("an email we can reach you on");
+    if (!value("b-phone")) problems.push("a phone number");
+    if (!picked()) problems.push("whether you're an RSIC delegate or a guest");
+    if (picked() === "delegate" && !value("b-school"))
+      problems.push("your delegation's school");
+    if (problems.length) {
+      status.className = "reg-status is-bad";
+      status.textContent = "We still need " + problems.join(", ") + ".";
+      status.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+
+    const reachUs =
+      " If it keeps happening, email " +
+      (content["contact.email"] || "raviscienceandinnovation@gmail.com") +
+      ".";
+    btn.disabled = true;
+    status.className = "reg-status";
+    status.textContent = "Booking...";
+    try {
+      const res = await fetch(rsicApi("/api/bonfire"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: value("b-name"),
+          email: value("b-email"),
+          phone: value("b-phone"),
+          attendee: picked(),
+          school: value("b-school"),
+          quantity: parseInt(qty.value, 10) || 1,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const owed = document.getElementById("bonfireTotal").textContent;
+        status.className = "reg-status is-good";
+        status.textContent =
+          (data.message || "Booked.") +
+          (data.ticket ? " Your booking number is " + data.ticket + "." : "") +
+          (owed ? " Amount to pay on the spot: " + owed + "." : "");
+        bonfireForm.reset();
+        picks.forEach((q) => q.closest(".realm-pick").classList.remove("is-on"));
+        paintAmount();
+      } else {
+        status.className = "reg-status is-bad";
+        status.textContent = (data.error || "That didn't go through.") + reachUs;
+      }
+    } catch (err) {
+      status.className = "reg-status is-bad";
+      status.textContent = "We couldn't reach the server. Try again in a moment." + reachUs;
+    } finally {
+      btn.disabled = !open;
+    }
+  });
+}

@@ -957,7 +957,161 @@ const sendConfirmation = async (row, content) => {
   }
 };
 
+// ------------------------------------------------------------------ bonfire
+// The Spooky Bonfire ticket (owner, 2026-11-06). Same look and the same rules
+// as the delegation email: the prose and the payment message come from the
+// bonfire.* settings and the details are built from the booking row. It only
+// sends while bonfire.open is on, the one switch for bookings and emails.
+const BONFIRE_DEFAULTS = {
+  subject: "Your Spooky Bonfire ticket: {ticket_no}",
+  intro:
+    "Your booking for the Spooky Bonfire is confirmed.\n\nYour ticket number is {ticket_no}. Show it at the gate.",
+  notes:
+    "If any of the details above are wrong, reply to this email and we will correct them.",
+  signoff: "The RSIC team",
+};
+
+const renderBonfire = (row, content) => {
+  const c = content || {};
+  const ticket = "B" + String(row.ticket_no || row.id || "").padStart(3, "0");
+  const qty = Number(row.quantity) || 1;
+  const amount = row.amount_due != null ? formatPkr(row.amount_due) : "";
+  const who = row.attendee_type === "delegate" ? "RSIC delegate" : "Guest";
+  const evening = [
+    ["Date", setting(c, "bonfire.date", "Sunday 15 November 2026")],
+    ["Time", setting(c, "bonfire.time", "6:00 to 8:00 PM")],
+    ["Venue", setting(c, "bonfire.venue", "The City School, Ravi Campus")],
+    ["Dress code", setting(c, "bonfire.dress", "")],
+  ];
+  const booking = [
+    ["Name", oneLine(row.name)],
+    ["Tickets", String(qty)],
+    ["Coming as", who],
+    ["School or institute", oneLine(row.school || "")],
+    ["Phone", oneLine(row.phone)],
+  ];
+  const values = {
+    ticket_no: ticket,
+    name: oneLine(row.name) || "guest",
+    tickets: String(qty),
+    amount,
+  };
+  const payment = fill(String(c["bonfire.payment"] || "").trim(), values);
+  const subject = oneLine(fill(c["bonfire.email.subject"] || BONFIRE_DEFAULTS.subject, values));
+  const intro = fill(c["bonfire.email.intro"] || BONFIRE_DEFAULTS.intro, values);
+  const notes = fill(c["bonfire.email.notes"] || BONFIRE_DEFAULTS.notes, values);
+  const signoff = fill(c["bonfire.email.signoff"] || BONFIRE_DEFAULTS.signoff, values);
+  const contact = setting(c, "contact.email", FALLBACK.contact);
+
+  const textBlock = (title, pairsList) => {
+    const lines = pairsList.filter((p) => p[1]).map((p) => "  " + (p[0] + ":").padEnd(22) + p[1]);
+    return lines.length ? ["", title.toUpperCase(), "-".repeat(40), ...lines] : [];
+  };
+  const text = [
+    "SPOOKY BONFIRE TICKET",
+    "Ticket number: " + ticket,
+    "",
+    "Dear " + values.name + ",",
+    "",
+    intro,
+    ...(amount ? ["", "Amount to pay on the spot: " + amount] : []),
+    ...(payment ? ["", payment.replace(/\*([^*\n]+)\*/g, "$1")] : []),
+    ...textBlock("Your booking", booking),
+    ...textBlock("The evening", evening),
+    "",
+    notes,
+    "",
+    signoff,
+    "",
+    "Contact: " + contact,
+    "Ticket " + ticket + " · cityrsic.com",
+  ].join("\n");
+
+  const box = (label, value, size) =>
+    '<tr><td style="padding-top:14px"><table role="presentation" cellpadding="0" cellspacing="0" style="background:' +
+    C.raised +
+    ';border-radius:12px"><tr><td style="padding:12px 18px;font-family:' +
+    SANS +
+    ";font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:" +
+    C.soft +
+    '">' +
+    escapeHtml(label) +
+    '<div style="font-family:' +
+    SERIF +
+    ";font-size:" +
+    size +
+    "px;color:" +
+    C.pink +
+    ';margin-top:4px;letter-spacing:0;text-transform:none">' +
+    escapeHtml(value) +
+    "</div></td></tr></table></td></tr>";
+  const section = (title, pairsList) => {
+    const body = rows(pairsList);
+    return body ? heading(title) + body : "";
+  };
+
+  const html = [
+    '<!doctype html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>Spooky Bonfire ticket</title></head>',
+    '<body style="margin:0;padding:0;background:' + C.page + ';-webkit-text-size-adjust:100%">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' + C.page + ';padding:28px 12px">',
+    '<tr><td align="center">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:' + C.card + ';border-radius:18px;padding:34px 30px">',
+    '<tr><td style="font-family:' + SERIF + ";font-size:27px;color:" + C.text + '">RSIC<span style="color:' + C.pink + '">.</span></td></tr>',
+    '<tr><td style="font-family:' + SERIF + ";font-style:italic;font-size:14px;color:" + C.pink + ';padding-top:2px">Spooky Bonfire</td></tr>',
+    '<tr><td style="padding-top:20px"><div style="height:1px;background:' + C.line + '"></div></td></tr>',
+    '<tr><td style="padding-top:24px;font-family:' + SERIF + ";font-size:22px;color:" + C.text + '">Your ticket</td></tr>',
+    box("Ticket number", ticket, 28),
+    '<tr><td style="padding-top:24px;font-family:' + SANS + ";font-size:15px;color:" + C.text + ';font-weight:700">Dear ' + escapeHtml(values.name) + ",</td></tr>",
+    '<tr><td style="padding-top:12px">' + paras(intro) + "</td></tr>",
+    amount || payment ? heading("Payment") : "",
+    amount ? box("Amount to pay on the spot", amount, 26) : "",
+    payment ? callout(payment) : "",
+    section("Your booking", booking),
+    section("The evening", evening),
+    section("Contact", [
+      ["Email", contact, '<a href="mailto:' + escapeHtml(contact) + '" style="color:' + C.pink + ';text-decoration:none">' + escapeHtml(contact) + "</a>"],
+    ]),
+    '<tr><td style="padding-top:26px"><div style="height:1px;background:' + C.line + '"></div></td></tr>',
+    '<tr><td style="padding-top:22px">' + paras(notes) + "</td></tr>",
+    '<tr><td style="padding-top:14px;font-family:' + SERIF + ";font-style:italic;font-size:17px;color:" + C.pink + '">' + escapeHtml(signoff) + "</td></tr>",
+    '<tr><td style="padding-top:16px;font-family:' + SANS + ";font-size:12px;color:" + C.soft + '">Ticket ' + escapeHtml(ticket) + ' &middot; <a href="https://cityrsic.com/bonfire" style="color:' + C.pink + ';text-decoration:none">cityrsic.com/bonfire</a></td></tr>',
+    "</table></td></tr></table></body></html>",
+  ].join("");
+
+  return { subject, text, html };
+};
+
+const sendBonfire = async (row, content) => {
+  const e = String(row.email || "").trim();
+  const to = e.length <= 160 && PLAIN_ADDRESS.test(e) ? [e] : [];
+  if (!to.length)
+    return { ok: false, to: [], error: "This booking has no usable email address." };
+  if (loadError)
+    return { ok: false, to, error: "The mail library could not start on this server (" + loadError + ")." };
+  if (!mailConfigured())
+    return { ok: false, to, error: "Email is not set up yet: MAIL_USER and MAIL_APP_PASSWORD are missing on the server." };
+  const c = content || {};
+  if (String(c["bonfire.open"] || "off").toLowerCase() !== "on")
+    return { ok: false, to, skipped: true, error: "Bonfire bookings and ticket emails are switched off in the dashboard." };
+  const { subject, text, html } = renderBonfire(row, c);
+  try {
+    const info = await getTransport().sendMail({
+      from: '"' + MAIL_FROM_NAME + '" <' + fromAddress() + ">",
+      ...(MAIL_REPLY_TO ? { replyTo: MAIL_REPLY_TO } : {}),
+      to,
+      subject,
+      text,
+      html,
+    });
+    return { ok: true, to, id: info.messageId };
+  } catch (err) {
+    return { ok: false, to, error: err.message || "The mail server refused it." };
+  }
+};
+
 module.exports = {
+  sendBonfire,
+  renderBonfire,
   sendConfirmation,
   renderConfirmation,
   priceFor,
