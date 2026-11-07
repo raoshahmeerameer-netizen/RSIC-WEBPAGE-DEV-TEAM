@@ -975,8 +975,15 @@ const renderBonfire = (row, content) => {
   const c = content || {};
   const ticket = "B" + String(row.ticket_no || row.id || "").padStart(3, "0");
   const qty = Number(row.quantity) || 1;
-  const amount = row.amount_due != null ? formatPkr(row.amount_due) : "";
+  // free for RSIC delegates, paid on the spot by outsiders (owner, 2026-11-07)
+  const amount =
+    row.attendee_type === "delegate"
+      ? "Free (RSIC delegate)"
+      : row.amount_due != null
+        ? formatPkr(row.amount_due)
+        : "";
   const who = row.attendee_type === "delegate" ? "RSIC delegate" : "Guest";
+  const amountLabel = row.attendee_type === "delegate" ? "Entry" : "Amount to pay on the spot";
   const evening = [
     ["Date", setting(c, "bonfire.date", "Sunday 15 November 2026")],
     ["Time", setting(c, "bonfire.time", "6:00 to 8:00 PM")],
@@ -1014,7 +1021,7 @@ const renderBonfire = (row, content) => {
     "Dear " + values.name + ",",
     "",
     intro,
-    ...(amount ? ["", "Amount to pay on the spot: " + amount] : []),
+    ...(amount ? ["", amountLabel + ": " + amount] : []),
     ...(payment ? ["", payment.replace(/\*([^*\n]+)\*/g, "$1")] : []),
     ...textBlock("Your booking", booking),
     ...textBlock("The evening", evening),
@@ -1064,7 +1071,7 @@ const renderBonfire = (row, content) => {
     '<tr><td style="padding-top:24px;font-family:' + SANS + ";font-size:15px;color:" + C.text + ';font-weight:700">Dear ' + escapeHtml(values.name) + ",</td></tr>",
     '<tr><td style="padding-top:12px">' + paras(intro) + "</td></tr>",
     amount || payment ? heading("Payment") : "",
-    amount ? box("Amount to pay on the spot", amount, 26) : "",
+    amount ? box(amountLabel, amount, 26) : "",
     payment ? callout(payment) : "",
     section("Your booking", booking),
     section("The evening", evening),

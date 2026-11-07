@@ -1900,19 +1900,27 @@ if (bonfireForm) {
   const value = (id) => document.getElementById(id).value.trim();
   const picked = () => (picks.find((p) => p.checked) || {}).value || "";
 
+  // Free for RSIC delegates; outsiders pay per ticket (owner, 2026-11-07).
   const paintAmount = () => {
+    if (picked() === "delegate") {
+      amountBox.hidden = false;
+      document.getElementById("bonfireTotal").textContent = "Free";
+      document.getElementById("bonfireHow").textContent = "The bonfire is free for RSIC delegates.";
+      return;
+    }
     if (price == null) return (amountBox.hidden = true);
     const n = parseInt(qty.value, 10) || 1;
     amountBox.hidden = false;
     document.getElementById("bonfireTotal").textContent = pkrOf(n * price);
     document.getElementById("bonfireHow").textContent =
-      n + (n === 1 ? " ticket" : " tickets") + " × " + pkrOf(price) + ". Paid on the spot.";
+      n + (n === 1 ? " ticket" : " tickets") + " × " + pkrOf(price) + ". Paid on the spot, in cash.";
   };
 
   picks.forEach((p) =>
-    p.addEventListener("change", () =>
-      picks.forEach((q) => q.closest(".realm-pick").classList.toggle("is-on", q.checked)),
-    ),
+    p.addEventListener("change", () => {
+      picks.forEach((q) => q.closest(".realm-pick").classList.toggle("is-on", q.checked));
+      paintAmount();
+    }),
   );
   qty.addEventListener("change", paintAmount);
 
@@ -1980,7 +1988,7 @@ if (bonfireForm) {
         status.textContent =
           (data.message || "Booked.") +
           (data.ticket ? " Your booking number is " + data.ticket + "." : "") +
-          (owed ? " Amount to pay on the spot: " + owed + "." : "");
+          (owed && owed !== "Free" ? " Amount to pay on the spot: " + owed + "." : "");
         bonfireForm.reset();
         picks.forEach((q) => q.closest(".realm-pick").classList.remove("is-on"));
         paintAmount();

@@ -914,7 +914,8 @@ app.post("/api/bonfire", async (req, res) => {
           attendee_type: attendee,
           school: school || null,
           quantity,
-          amount_due: price == null ? null : price * quantity,
+          // free for RSIC delegates, paid per ticket by outsiders
+          amount_due: attendee === "delegate" ? 0 : price == null ? null : price * quantity,
         },
       ])
       .select("ticket_no")
