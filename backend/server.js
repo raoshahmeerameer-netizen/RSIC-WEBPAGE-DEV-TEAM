@@ -97,6 +97,13 @@ const upload = multer({
   limits: { fileSize: MAX_FILE, files: 24, fields: 40, parts: 80 },
 });
 
+// Study guides come straight out of Canva at 4 to 9 MB, so they get the
+// study-guides bucket's own 20 MB ceiling instead of the 5 MB photo limit.
+const uploadGuide = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024, files: 1, fields: 4, parts: 6 },
+});
+
 const EXT = {
   "image/jpeg": "jpg", "image/png": "png",
   "image/webp": "webp", "application/pdf": "pdf",
@@ -1191,7 +1198,7 @@ app.get("/api/admin/file", requireStaff, async (req, res) => {
 // Study guides are meant to be downloaded by delegates, so they sit in a
 // public bucket. The admin uploads one per realm and the realm page shows a
 // download button once the key has a value.
-app.post("/api/admin/guide", requireAdmin, upload.single("guide"), async (req, res) => {
+app.post("/api/admin/guide", requireAdmin, uploadGuide.single("guide"), async (req, res) => {
   const realm = String(req.body.realm || "");
   if (!REALM_KEYS.includes(realm))
     return res.status(400).json({ error: "Unknown realm." });
@@ -1338,7 +1345,9 @@ app.use((err, req, res, next) => {
   if (err && err.name === "MulterError") {
     const msg =
       err.code === "LIMIT_FILE_SIZE"
-        ? "That file is too big. Each file must be 5 MB or less."
+        ? req.path === "/api/admin/guide"
+          ? "That study guide is too big. It must be 20 MB or less."
+          : "That file is too big. Each file must be 5 MB or less."
         : "There was a problem with the files you attached.";
     // multer stops before the route runs, so record the attempt here
     if (req.path === "/api/register") recordAttempt(req.body, msg);
