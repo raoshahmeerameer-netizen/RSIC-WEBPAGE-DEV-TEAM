@@ -289,7 +289,7 @@ loadContent().catch((err) => console.error("content warm-up:", err.message));
 // Public: every editable string, so the pages can fill themselves in.
 app.get("/api/content", async (_req, res) => {
   try {
-    res.json({ content: await loadContentFast() });
+    res.json({ content: withRealmCount(await loadContentFast()) });
   } catch (err) {
     console.error("content:", err.message);
     res.status(500).json({ error: "Could not load site content." });
@@ -430,7 +430,7 @@ const SAMPLE_DELEGATION = {
   supervisor_phone: "+92 300 1234567",
   supervisor_email: "supervisor@example.edu.pk",
   delegates: 7,
-  realms: ["business", "math", "cs", "psych", "robotics"],
+  realms: ["business", "math", "cs", "psych", "film"],
   head_delegate: {
     name: "Hamza Raza",
     email: "head@example.com",
@@ -569,6 +569,173 @@ const REALM_KEYS = [
   "math","pure","bio","chem","physics","cs",
   "psych","business","film","law","robotics",
 ];
+
+// ------------------------------------------------------------ realm switches
+// Every realm has an on/off switch, realm.<key>.active, flipped from the
+// dashboard (owner, 2026-11-09). A realm that is off disappears from the site
+// and from registration, and comes back whole when it is switched on again:
+// nothing is deleted, the pages just carry markers the server cuts out.
+// In site order, with each realm's page and its wheel label on the About page.
+const REALMS = [
+  ["pure", "nexus", "Project Nexus", ["Pure", "Sciences"]],
+  ["business", "gaias-exchange", "Gaia's Exchange", ["Environmental", "Business"]],
+  ["math", "cartesian", "The Cartesian Realm", ["Mathematics"]],
+  ["bio", "watson-street", "The Watson Street", ["Biology"]],
+  ["chem", "curies-chamber", "Curie's Chamber", ["Chemistry"]],
+  ["physics", "astral-axiom", "Astral Axiom", ["Physics"]],
+  ["cs", "hypatias-enclave", "Hypatia's Enclave", ["Computer", "Science"]],
+  ["psych", "pterions-sanctum", "Pterion's Sanctum", ["Psychology"]],
+  ["film", "jokers-act", "The Joker's Act", ["Film & Drama"]],
+  ["law", "athenas-bench", "Athena's Bench", ["Law &", "Sociology"]],
+  ["robotics", "theseus-circuit", "Theseus' Circuit", ["Robotics"]],
+];
+const realmIsOn = (content, key) =>
+  String((content && content["realm." + key + ".active"]) || "on")
+    .trim()
+    .toLowerCase() !== "off";
+const activeRealms = (content) => REALMS.filter((r) => realmIsOn(content, r[0]));
+
+const NUMBER_WORDS = [
+  "no", "one", "two", "three", "four", "five", "six",
+  "seven", "eight", "nine", "ten", "eleven", "twelve",
+];
+const countWords = (n) => {
+  const word = NUMBER_WORDS[n] || String(n);
+  return { lower: word, upper: word.charAt(0).toUpperCase() + word.slice(1), n: String(n) };
+};
+
+// Stored site text can say {realm_count}, {Realm_count} or {realm_number}, so a
+// heading like "{Realm_count} worlds" stays right whichever realms are on.
+// Stored text can also carry the same <!--realm:key--> markers as the pages,
+// so a sentence naming a realm loses that realm's words while it is off.
+const withRealmCount = (content) => {
+  const on = activeRealms(content);
+  const onKeys = new Set(on.map((r) => r[0]));
+  const c = countWords(on.length);
+  const out = {};
+  Object.entries(content || {}).forEach(([k, v]) => {
+    if (typeof v !== "string") return (out[k] = v);
+    let s = v
+      .split("{realm_count}").join(c.lower)
+      .split("{Realm_count}").join(c.upper)
+      .split("{realm_number}").join(c.n);
+    if (s.includes("<!--realm")) {
+      REALMS.forEach(([key]) => {
+        const open = "<!--realm:" + key + "-->";
+        const close = "<!--/realm:" + key + "-->";
+        s = onKeys.has(key)
+          ? s.split(open).join("").split(close).join("")
+          : s.replace(new RegExp(open + "[\\s\\S]*?" + close, "g"), "");
+      });
+      s = s.replace(
+        /<!--realm-count:(lower|upper|n)-->[^<]*<!--\/realm-count-->/g,
+        (_m, kind) => (kind === "lower" ? c.lower : kind === "upper" ? c.upper : c.n),
+      );
+    }
+    out[k] = s;
+  });
+  return out;
+};
+
+const escHtml = (s) =>
+  String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+// The About page's wheel, drawn for however many realms are on: spokes evenly
+// round a circle of 150, dots at its edge and labels 192 out, the same
+// geometry the hand-placed eleven-spoke wheel used.
+const wheelSvg = (realms) => {
+  const n = realms.length || 1;
+  const f = (v) => v.toFixed(1);
+  const spokes = [];
+  const marks = [];
+  realms.forEach((r, i) => {
+    const a = (2 * Math.PI * i) / n;
+    const sx = 260 + 150 * Math.sin(a);
+    const sy = 260 - 150 * Math.cos(a);
+    spokes.push('<line x1="260" y1="260" x2="' + f(sx) + '" y2="' + f(sy) + '"/>');
+    const lines = r[3];
+    const lx = 260 + 192 * Math.sin(a);
+    const ly = 260 - 192 * Math.cos(a) + 5 - (lines.length - 1) * 11.6;
+    const s = Math.sin(a);
+    const anchor = Math.abs(s) < 0.15 ? "middle" : s > 0 ? "start" : "end";
+    marks.push(
+      '<circle cx="' + f(sx) + '" cy="' + f(sy) + '" r="4" fill="var(--rsic-pink-soft)"/>',
+      '<text x="' + f(lx) + '" y="' + f(ly) + '" text-anchor="' + anchor + '">' +
+        lines
+          .map(
+            (t, j) =>
+              '<tspan x="' + f(lx) + '"' + (j ? ' dy="1.45em"' : "") + ">" + escHtml(t) + "</tspan>",
+          )
+          .join("") +
+        "</text>",
+    );
+  });
+  return (
+    '<svg viewBox="-92 -26 704 572" fill="none">\n' +
+    '<circle cx="260" cy="260" r="150" stroke="var(--line)" stroke-width="1"/>\n' +
+    '<g stroke="var(--line)" stroke-width="1">\n' + spokes.join("\n") + "\n</g>\n" +
+    '<circle cx="260" cy="260" r="44" fill="none" stroke="var(--rsic-pink)" stroke-width="1"/>\n' +
+    '<g font-family="Manrope, system-ui, sans-serif" font-size="16" font-weight="600" fill="var(--muted)">\n' +
+    marks.join("\n") +
+    "\n</g></svg>"
+  );
+};
+
+// Cut a page down to the realms that are on. Pieces of a page that belong to
+// one realm sit between <!--realm:key--> and <!--/realm:key-->; a realm count
+// sits between <!--realm-count:lower|upper|n--> and <!--/realm-count-->; the
+// wheel between <!--realm-wheel--> and <!--/realm-wheel-->. A realm page's
+// "Previous realm" and "Next realm" step over any realm that is off.
+const filterRealms = (html, content, pageKey) => {
+  const on = activeRealms(content);
+  const onKeys = new Set(on.map((r) => r[0]));
+  let out = html;
+  REALMS.forEach(([key]) => {
+    const open = "<!--realm:" + key + "-->";
+    const close = "<!--/realm:" + key + "-->";
+    if (onKeys.has(key)) out = out.split(open).join("").split(close).join("");
+    else
+      out = out.replace(
+        // a whole line goes with its line break; a piece inside a sentence
+        // leaves the spaces around it alone
+        new RegExp(open + "[\\s\\S]*?" + close + "(?:[ \\t]*\\r?\\n)?", "g"),
+        "",
+      );
+  });
+  const c = countWords(on.length);
+  out = out.replace(
+    /<!--realm-count:(lower|upper|n)-->[^<]*<!--\/realm-count-->/g,
+    (_m, kind) => (kind === "lower" ? c.lower : kind === "upper" ? c.upper : c.n),
+  );
+  out = out.replace(/<!--realm-wheel-->[\s\S]*?<!--\/realm-wheel-->/, () =>
+    on.length ? wheelSvg(on) : "",
+  );
+  if (pageKey && on.length) {
+    const i = on.findIndex((r) => r[0] === pageKey);
+    if (i !== -1) {
+      const near = { prev: on[(i - 1 + on.length) % on.length], next: on[(i + 1) % on.length] };
+      out = out.replace(
+        /<a class="(prev|next)" href="\/realms\/([a-z-]+)">[\s\S]*?<\/a>/g,
+        (whole, dir, slug) => {
+          const target = REALMS.find((r) => r[1] === slug);
+          if (target && onKeys.has(target[0])) return whole;
+          const r = near[dir];
+          const name = (content && content["realm." + r[0] + ".name"]) || r[2];
+          return (
+            '<a class="' + dir + '" href="/realms/' + r[1] + '"><small>' +
+            (dir === "prev" ? "Previous realm" : "Next realm") +
+            '</small><strong data-cms="realm.' + r[0] + '.name">' + escHtml(name) + "</strong></a>"
+          );
+        },
+      );
+    }
+  }
+  return out;
+};
 
 // Five registrations per address per hour, counting only ones that went
 // through. Refused attempts used to count too, so a school fixing a mistake,
@@ -764,11 +931,14 @@ app.post("/api/register", upload.any(), async (req, res) => {
     // Unknown keys are dropped and duplicates collapsed. The compulsory realms
     // are added for every delegation whatever was sent, and the limits are
     // totals that count them, so the extras are what the school chose.
+    // A realm switched off in the dashboard cannot be entered, even by a form
+    // that still shows it.
+    const open = new Set(activeRealms(content).map((r) => r[0]));
     const picked = Array.isArray(req.body.realms) ? req.body.realms : [];
     const clean = [
-      ...new Set(picked.filter((k) => REALM_KEYS.includes(k))),
+      ...new Set(picked.filter((k) => REALM_KEYS.includes(k) && open.has(k))),
     ];
-    const core = compulsory.filter((k) => REALM_KEYS.includes(k));
+    const core = compulsory.filter((k) => REALM_KEYS.includes(k) && open.has(k));
     const extras = clean.filter((k) => !compulsory.includes(k));
     const label = (k) => content["realm." + k + ".name"] || k;
 
@@ -1413,6 +1583,48 @@ app.get(["/admin", "/admin.html", "/admindashboard.html"], (_req, res) =>
   res.redirect(301, "/admindashboard"),
 );
 
+// Public pages go through the realm switches (see filterRealms): each is read
+// once, cut down to the realms that are on and sent from here, even when every
+// realm is on, so a marker inside a meta tag never reaches a visitor. A
+// switched-off realm's own page sends visitors to /realms.
+const pageCache = new Map();
+const readPage = async (file) => {
+  if (!pageCache.has(file))
+    pageCache.set(file, await require("fs").promises.readFile(file, "utf8"));
+  return pageCache.get(file);
+};
+app.use(async (req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next();
+  const p = req.path;
+  let rel = null;
+  if (p === "/") rel = "index.html";
+  else if (p === "/sitemap.xml" || p === "/llms.txt") rel = p.slice(1);
+  else if (/^\/[a-z0-9-]+(\/[a-z0-9-]+)?\/?$/.test(p))
+    rel = p.replace(/^\/|\/$/g, "") + ".html";
+  if (!rel) return next();
+  const file = path.join(SITE_DIR, rel);
+  if (!file.startsWith(SITE_DIR + path.sep)) return next();
+  try {
+    const content = await loadContentFast();
+    const slug = (rel.match(/^realms\/([a-z-]+)\.html$/) || [])[1];
+    const realm = slug && REALMS.find((r) => r[1] === slug);
+    if (realm && !realmIsOn(content, realm[0])) return res.redirect(302, "/realms");
+    // the dashboards keep their own routes and are never cut down
+    if (/^(admin|advanced|admin-email)\.html$/.test(rel)) return next();
+    let body;
+    try {
+      body = await readPage(file);
+    } catch {
+      return next();
+    }
+    res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+    res.type(rel.endsWith(".xml") ? "application/xml" : rel.endsWith(".txt") ? "text/plain" : "html");
+    res.send(filterRealms(body, content, realm && realm[0]));
+  } catch (e) {
+    next();
+  }
+});
+
 // realms.html and the realms/ folder share a name, so serve the page directly
 // before express.static looks for a directory index that does not exist.
 app.get(["/realms", "/realms/"], (_req, res) => sendPage(res, "realms.html"));
@@ -1461,12 +1673,15 @@ app.use(
   }),
 );
 
-app.use((req, res) => {
+app.use(async (req, res) => {
   if (req.path.startsWith("/api/"))
     return res.status(404).json({ error: "Not found" });
-  res.status(404).sendFile(path.join(SITE_DIR, "404.html"), (err) => {
-    if (err) res.status(404).type("text/plain").send("Page not found");
-  });
+  try {
+    const body = await readPage(path.join(SITE_DIR, "404.html"));
+    res.status(404).type("html").send(filterRealms(body, await loadContentFast()));
+  } catch {
+    res.status(404).type("text/plain").send("Page not found");
+  }
 });
 
 // Last resort. NODE_ENV is not set on the host, so Express's own handler

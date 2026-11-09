@@ -157,58 +157,58 @@
 
             <fieldset class="reg-field active reg-realms">
               <legend class="reg-legend" data-step="5">Realms</legend>
-              <p class="field-hint" id="realmsNote" data-cms="registration.realms_note">Every delegation takes both compulsory realms, Project Nexus and Gaia's Exchange, and then picks 3 to 5 more from the other nine.</p>
+              <p class="field-hint" id="realmsNote" data-cms="registration.realms_note">Every delegation takes both compulsory realms, Project Nexus and Gaia's Exchange, and then picks 3 to 5 more from the rest.</p>
 
               <p class="realm-pick-head">Compulsory for every delegation</p>
               <div class="realm-picker" aria-label="Compulsory realms">
-                <label class="realm-pick is-core">
+                <!--realm:pure--><label class="realm-pick is-core">
                   <input type="checkbox" name="coreRealm" value="pure" data-core="yes" checked disabled />
                   <span><b data-cms="realm.pure.name">Project Nexus</b><small>Pure Sciences</small></span>
-                </label>
-                <label class="realm-pick is-core">
+                </label><!--/realm:pure-->
+                <!--realm:business--><label class="realm-pick is-core">
                   <input type="checkbox" name="coreRealm" value="business" data-core="yes" checked disabled />
                   <span><b data-cms="realm.business.name">Gaia's Exchange</b><small>Environmental Business</small></span>
-                </label>
+                </label><!--/realm:business-->
               </div>
 
               <p class="realm-pick-head" id="extrasHead">Then choose 3 to 5 more</p>
               <div class="realm-picker">
-                <label class="realm-pick">
+                <!--realm:math--><label class="realm-pick">
                   <input type="checkbox" name="realms" value="math" />
                   <span><b data-cms="realm.math.name">The Cartesian Realm</b><small>Mathematics</small></span>
-                </label>
-                <label class="realm-pick">
+                </label><!--/realm:math-->
+                <!--realm:bio--><label class="realm-pick">
                   <input type="checkbox" name="realms" value="bio" />
                   <span><b data-cms="realm.bio.name">The Watson Street</b><small>Biology</small></span>
-                </label>
-                <label class="realm-pick">
+                </label><!--/realm:bio-->
+                <!--realm:chem--><label class="realm-pick">
                   <input type="checkbox" name="realms" value="chem" />
                   <span><b data-cms="realm.chem.name">Curie's Chamber</b><small>Chemistry</small></span>
-                </label>
-                <label class="realm-pick">
+                </label><!--/realm:chem-->
+                <!--realm:physics--><label class="realm-pick">
                   <input type="checkbox" name="realms" value="physics" />
                   <span><b data-cms="realm.physics.name">Astral Axiom</b><small>Physics</small></span>
-                </label>
-                <label class="realm-pick">
+                </label><!--/realm:physics-->
+                <!--realm:cs--><label class="realm-pick">
                   <input type="checkbox" name="realms" value="cs" />
                   <span><b data-cms="realm.cs.name">Hypatia's Enclave</b><small>Computer Science</small></span>
-                </label>
-                <label class="realm-pick">
+                </label><!--/realm:cs-->
+                <!--realm:psych--><label class="realm-pick">
                   <input type="checkbox" name="realms" value="psych" />
                   <span><b data-cms="realm.psych.name">Pterion's Sanctum</b><small>Psychology</small></span>
-                </label>
-                <label class="realm-pick">
+                </label><!--/realm:psych-->
+                <!--realm:film--><label class="realm-pick">
                   <input type="checkbox" name="realms" value="film" />
                   <span><b data-cms="realm.film.name">The Joker's Act</b><small>Film &amp; Drama</small></span>
-                </label>
-                <label class="realm-pick">
+                </label><!--/realm:film-->
+                <!--realm:law--><label class="realm-pick">
                   <input type="checkbox" name="realms" value="law" />
                   <span><b data-cms="realm.law.name">Athena's Bench</b><small>Law &amp; Sociology</small></span>
-                </label>
-                <label class="realm-pick">
+                </label><!--/realm:law-->
+                <!--realm:robotics--><label class="realm-pick">
                   <input type="checkbox" name="realms" value="robotics" />
                   <span><b data-cms="realm.robotics.name">Theseus' Circuit</b><small>Robotics</small></span>
-                </label>
+                </label><!--/realm:robotics-->
               </div>
 
               <p class="realm-tally" id="realmTally" role="status">2 of 8 realms chosen</p>
@@ -341,7 +341,7 @@
             <h2>How long is it?</h2>
             <p>
               Three days, from Friday 13 to Sunday 15 November. Rounds run from a 10-minute slot in The Joker's Act to a
-              full day in Project Nexus or Athena's Bench.
+              full day in Project Nexus<!--realm:law--> or Athena's Bench<!--/realm:law-->.
             </p>
           </div>
           <div class="faq-item">
@@ -389,7 +389,7 @@
             ><span class="wm" aria-hidden="true"><i>R</i><i>S</i><i>I</i><i>C</i><i class="dot">.</i></span></a>
           <p>
             RSIC 2026 runs from <b data-cms="event.dates">Friday 13 to Sunday 15 November</b>, starting at
-            <b data-cms="event.start_time">1:45 PM PKT</b>. Eleven realms, from maths and physics to moot court and
+            <b data-cms="event.start_time">1:45 PM PKT</b>. <!--realm-count:upper-->Eleven<!--/realm-count--> realms, from maths and physics to psychology and
             theatre.
           </p>
         </div>
@@ -413,6 +413,6 @@
 <p class="foot-credit">Website by <span data-cms="credit.builders">Shahmeer Ameer, Haider Ali Shah and Fasih Ajmal</span></p>
       </div>
     </footer>
-    <script src="/script.js?v=824f872f5f"></script>
+    <script src="/script.js?v=6860135dbd"></script>
   </body>
 </html>

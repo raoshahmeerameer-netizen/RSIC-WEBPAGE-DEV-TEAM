@@ -66,72 +66,72 @@
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
-  <url>
+  <!--realm:physics--><url>
     <loc>https://cityrsic.com/realms/astral-axiom</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
+  </url><!--/realm:physics-->
+  <!--realm:law--><url>
     <loc>https://cityrsic.com/realms/athenas-bench</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
+  </url><!--/realm:law-->
+  <!--realm:math--><url>
     <loc>https://cityrsic.com/realms/cartesian</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
+  </url><!--/realm:math-->
+  <!--realm:chem--><url>
     <loc>https://cityrsic.com/realms/curies-chamber</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
+  </url><!--/realm:chem-->
+  <!--realm:business--><url>
     <loc>https://cityrsic.com/realms/gaias-exchange</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
+  </url><!--/realm:business-->
+  <!--realm:cs--><url>
     <loc>https://cityrsic.com/realms/hypatias-enclave</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
+  </url><!--/realm:cs-->
+  <!--realm:film--><url>
     <loc>https://cityrsic.com/realms/jokers-act</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
+  </url><!--/realm:film-->
+  <!--realm:pure--><url>
     <loc>https://cityrsic.com/realms/nexus</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
+  </url><!--/realm:pure-->
+  <!--realm:psych--><url>
     <loc>https://cityrsic.com/realms/pterions-sanctum</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
+  </url><!--/realm:psych-->
+  <!--realm:robotics--><url>
     <loc>https://cityrsic.com/realms/theseus-circuit</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
+  </url><!--/realm:robotics-->
+  <!--realm:bio--><url>
     <loc>https://cityrsic.com/realms/watson-street</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
+  </url><!--/realm:bio-->
   <url>
     <loc>https://cityrsic.com/team/alizah-fatima-kazmi</loc>
     <lastmod>2026-09-30</lastmod>

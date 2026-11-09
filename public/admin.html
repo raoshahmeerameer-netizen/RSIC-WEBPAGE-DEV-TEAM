@@ -208,6 +208,28 @@
         color: var(--blue);
         border: 1px solid var(--blue);
       }
+      .realm-switches {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .realm-switch {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: var(--raised, rgba(255, 255, 255, 0.04));
+      }
+      .realm-switch b {
+        display: block;
+        margin-bottom: 6px;
+      }
+      .realm-switch .switch-state {
+        margin: 0;
+      }
 
       /* per-realm counts */
       .realm-counts {
@@ -477,7 +499,7 @@
       <div class="admin-wrap">
         <!-- the switch -->
                 <nav class="panel-tabs" id="panelTabs" aria-label="Dashboard sections">
-          <button class="panel-tab active" type="button" data-panels="panel-switch panel-numbers panel-regs panel-attempts panel-breakdown">Registrations</button>
+          <button class="panel-tab active" type="button" data-panels="panel-switch panel-realms panel-numbers panel-regs panel-attempts panel-breakdown">Registrations</button>
           <button class="panel-tab" type="button" data-panels="panel-bonfire">Bonfire</button>
           <button class="panel-tab" type="button" data-panels="panel-text">Site text</button>
           <button class="panel-tab" type="button" data-panels="panel-guides">Study guides</button>
@@ -497,6 +519,18 @@
           <button class="action-btn" type="button" id="regToggle">
             Open registration
           </button>
+        </section>
+
+        <!-- realm switches -->
+        <section class="panel" id="panel-realms" aria-label="Realms on the site">
+          <h2>Realms on the site</h2>
+          <p class="lede" style="margin-top: 0">
+            One button per realm. Removing a realm takes it off every page and
+            out of registration at once; bringing it back restores it exactly as
+            it was. Registrations already saved are never changed.
+          </p>
+          <div class="realm-switches" id="realmSwitches"></div>
+          <p class="admin-msg" id="realmMsg"></p>
         </section>
 
         <!-- numbers -->
@@ -775,7 +809,7 @@
       </form>
     </div>
 
-    <script src="/script.js?v=824f872f5f" defer></script>
+    <script src="/script.js?v=6860135dbd" defer></script>
     <script>
       (() => {
         // ---------------------------------------------------------- setup
@@ -814,6 +848,11 @@
           document.querySelector(".page-head .lede").textContent =
             "Review registrations, approve them and resend confirmations, export the list, and keep the fees and registration notes up to date.";
           $("regToggle").style.display = "none";
+          // the realm switches are the owner's; the server refuses them anyway
+          document.querySelectorAll("#panelTabs .panel-tab").forEach((b) => {
+            b.dataset.panels = b.dataset.panels.replace(" panel-realms", "");
+          });
+          $("panel-realms").hidden = true;
           ["panel-guides", "panel-forms", "panel-logos"].forEach(
             (id) => ($(id).hidden = true),
           );
@@ -2584,6 +2623,70 @@
             : "While this is closed, the register page shows your closed message and the form will not accept anything.";
         }
 
+        // One button per realm (owner, 2026-11-09). The server does the work:
+        // a realm that is off is cut out of every page and refused at
+        // registration, and comes back whole when switched on.
+        const REALM_SWITCHES = [
+          ["pure", "Project Nexus"], ["business", "Gaia's Exchange"],
+          ["math", "The Cartesian Realm"], ["bio", "The Watson Street"],
+          ["chem", "Curie's Chamber"], ["physics", "Astral Axiom"],
+          ["cs", "Hypatia's Enclave"], ["psych", "Pterion's Sanctum"],
+          ["film", "The Joker's Act"], ["law", "Athena's Bench"],
+          ["robotics", "Theseus' Circuit"],
+        ];
+        function paintRealms() {
+          const wrap = $("realmSwitches");
+          if (!wrap || REGI) return;
+          wrap.replaceChildren();
+          REALM_SWITCHES.forEach(([key, fallback]) => {
+            const name = valueOf("realm." + key + ".name") || fallback;
+            const on =
+              (valueOf("realm." + key + ".active") || "on").toLowerCase() !== "off";
+            const row = document.createElement("div");
+            row.className = "realm-switch";
+            const left = document.createElement("div");
+            const title = document.createElement("b");
+            title.textContent = name;
+            const pill = document.createElement("span");
+            pill.className = "switch-state " + (on ? "on" : "off");
+            pill.textContent = on ? "On the site" : "Removed";
+            left.append(title, pill);
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "action-btn";
+            btn.textContent = on ? "Remove" : "Bring back";
+            btn.addEventListener("click", async () => {
+              const next = on ? "off" : "on";
+              if (
+                !confirm(
+                  on
+                    ? "Remove " + name + " from the website and from registration?"
+                    : "Bring " + name + " back onto the website and into registration?",
+                )
+              )
+                return;
+              btn.disabled = true;
+              try {
+                await request("/api/content", {
+                  method: "PATCH",
+                  body: JSON.stringify({ updates: { ["realm." + key + ".active"]: next } }),
+                });
+                await loadContent();
+                say(
+                  $("realmMsg"),
+                  name + (next === "on" ? " is back on the site." : " has been removed from the site."),
+                  true,
+                );
+              } catch (err) {
+                say($("realmMsg"), err.message, false);
+                btn.disabled = false;
+              }
+            });
+            row.append(left, btn);
+            wrap.append(row);
+          });
+        }
+
         $("regToggle").addEventListener("click", async () => {
           const open =
             (valueOf("registration.open") || "off").toLowerCase() === "on";
@@ -2623,6 +2726,7 @@
             renderDocs();
             renderLogos();
             paintSwitch();
+            paintRealms();
             markDirty();
           } catch (err) {
             say($("cmsMsg"), err.message, false);

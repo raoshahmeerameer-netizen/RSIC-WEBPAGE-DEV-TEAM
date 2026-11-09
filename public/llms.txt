@@ -1,14 +1,14 @@
 # RSIC 2026
 
-> RSIC is a student-run inter-school competition in Pakistan, presented by The City School, Ravi Campus. It runs from Friday 13 to Sunday 15 November 2026 at TCS Ravi, with eleven competitions called Realms.
+> RSIC is a student-run inter-school competition in Pakistan, presented by The City School, Ravi Campus. It runs from Friday 13 to Sunday 15 November 2026 at TCS Ravi, with <!--realm-count:lower-->eleven<!--/realm-count--> competitions called Realms.
 
 Schools register as a delegation of 5 to 7 delegates. A delegation enters 5 to 7 realms: Project Nexus and Gaia's Exchange, which are compulsory, and 3 to 5 more. Entry is open to O Levels (Grade 9) and above. Registrations are open now.
 
 ## Pages
 
-- [Home](https://cityrsic.com/): countdown, the eleven realms and how to enter
+- [Home](https://cityrsic.com/): countdown, the <!--realm-count:lower-->eleven<!--/realm-count--> realms and how to enter
 - [About](https://cityrsic.com/about): why RSIC exists and the disciplines it covers
-- [Realms](https://cityrsic.com/realms): all eleven realms, with format and team size
+- [Realms](https://cityrsic.com/realms): all <!--realm-count:lower-->eleven<!--/realm-count--> realms, with format and team size
 - [Register](https://cityrsic.com/register): the delegation form, downloadable forms and common questions
 - [Invitation](https://cityrsic.com/invitation): the organisers' invitation, page by page, with a PDF to download
 - [Spooky Bonfire](https://cityrsic.com/bonfire): the bonfire on 15 November, 6:00 to 8:00 PM, free for RSIC delegates, PKR 500 for outsiders paid on the spot
@@ -20,17 +20,17 @@ Schools register as a delegation of 5 to 7 delegates. A delegation enters 5 to 7
 
 ## Realms
 
-- [Project Nexus](https://cityrsic.com/realms/nexus): Pure Sciences, compulsory realm
-- [Gaia's Exchange](https://cityrsic.com/realms/gaias-exchange): Environmental Business, compulsory realm
-- [The Cartesian Realm](https://cityrsic.com/realms/cartesian): Mathematics
-- [The Watson Street](https://cityrsic.com/realms/watson-street): Biology
-- [Curie's Chamber](https://cityrsic.com/realms/curies-chamber): Chemistry
-- [Astral Axiom](https://cityrsic.com/realms/astral-axiom): Physics
-- [Hypatia's Enclave](https://cityrsic.com/realms/hypatias-enclave): Computer Science
-- [Pterion's Sanctum](https://cityrsic.com/realms/pterions-sanctum): Psychology
-- [The Joker's Act](https://cityrsic.com/realms/jokers-act): Film & Drama
-- [Athena's Bench](https://cityrsic.com/realms/athenas-bench): Law & Sociology
-- [Theseus' Circuit](https://cityrsic.com/realms/theseus-circuit): Robotics
+<!--realm:pure-->- [Project Nexus](https://cityrsic.com/realms/nexus): Pure Sciences, compulsory realm<!--/realm:pure-->
+<!--realm:business-->- [Gaia's Exchange](https://cityrsic.com/realms/gaias-exchange): Environmental Business, compulsory realm<!--/realm:business-->
+<!--realm:math-->- [The Cartesian Realm](https://cityrsic.com/realms/cartesian): Mathematics<!--/realm:math-->
+<!--realm:bio-->- [The Watson Street](https://cityrsic.com/realms/watson-street): Biology<!--/realm:bio-->
+<!--realm:chem-->- [Curie's Chamber](https://cityrsic.com/realms/curies-chamber): Chemistry<!--/realm:chem-->
+<!--realm:physics-->- [Astral Axiom](https://cityrsic.com/realms/astral-axiom): Physics<!--/realm:physics-->
+<!--realm:cs-->- [Hypatia's Enclave](https://cityrsic.com/realms/hypatias-enclave): Computer Science<!--/realm:cs-->
+<!--realm:psych-->- [Pterion's Sanctum](https://cityrsic.com/realms/pterions-sanctum): Psychology<!--/realm:psych-->
+<!--realm:film-->- [The Joker's Act](https://cityrsic.com/realms/jokers-act): Film & Drama<!--/realm:film-->
+<!--realm:law-->- [Athena's Bench](https://cityrsic.com/realms/athenas-bench): Law & Sociology<!--/realm:law-->
+<!--realm:robotics-->- [Theseus' Circuit](https://cityrsic.com/realms/theseus-circuit): Robotics<!--/realm:robotics-->
 
 ## Contact
 
