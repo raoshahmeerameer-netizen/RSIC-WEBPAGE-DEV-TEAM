@@ -412,6 +412,35 @@
           </p>
           <p class="msg" id="msg"></p>
         </div>
+
+        <div class="panel">
+          <h2>Every other word</h2>
+          <p class="lede">
+            Each heading, label and small line in the email, in the order they
+            appear. Clear a field to go back to the wording shown in grey,
+            except the ones marked as optional, which are left out when empty.
+          </p>
+          <div id="wording"></div>
+          <p class="hint">
+            In these, <code>{count}</code> is the number of realms or delegates
+            under that heading, and the payment line also takes
+            <code>{per_delegate} {early_bird} {delegation_fee}</code>. The
+            placeholders listed above work here too.
+          </p>
+        </div>
+
+        <div class="panel">
+          <h2>Shared with the website</h2>
+          <p class="lede">
+            The email shows these too, but so does the website. Changing one
+            here changes it on the site as well.
+          </p>
+          <div id="shared"></div>
+          <p class="hint">
+            In the pink box, put <code>*stars*</code> around a phrase to make
+            it bold pink, and leave a blank line between paragraphs.
+          </p>
+        </div>
       </div>
 
       <div class="preview-wrap">
@@ -482,9 +511,67 @@
 
         let groups = [];
         const boxes = new Map();
+        // every other word, and the settings the email shares with the site
+        const extra = new Map();
+        let saved = {};
+
+        const addField = (wrap, key, label, value, opts) => {
+          const f = document.createElement("div");
+          f.className = "field";
+          const l = document.createElement("label");
+          l.htmlFor = "x-" + key;
+          l.textContent = label + (opts.optional ? " (optional)" : "");
+          const input = document.createElement(
+            opts.multiline ? "textarea" : "input",
+          );
+          if (!opts.multiline) input.type = "text";
+          input.id = "x-" + key;
+          input.value = value;
+          if (opts.fallback) input.placeholder = opts.fallback;
+          input.addEventListener("input", schedulePreview);
+          f.append(l, input);
+          wrap.append(f);
+          extra.set(key, input);
+        };
+
+        const buildWording = (wording, shared, values) => {
+          const wrap = $("wording");
+          wrap.replaceChildren();
+          wording.forEach((g) => {
+            const sec = document.createElement("div");
+            sec.className = "group";
+            const head = document.createElement("div");
+            head.className = "group-head";
+            const title = document.createElement("span");
+            title.className = "group-title";
+            title.textContent = g.title;
+            head.append(title);
+            sec.append(head);
+            g.items.forEach((it) => {
+              const key = "email.confirm.w." + it[0];
+              addField(sec, key, it[1], values[key] || "", {
+                fallback: it[2],
+                optional: !!it[3],
+              });
+            });
+            wrap.append(sec);
+          });
+          const sharedWrap = $("shared");
+          sharedWrap.replaceChildren();
+          shared.forEach((s) =>
+            addField(sharedWrap, s[0], s[1], values[s[0]] || "", {
+              multiline: !!s[2],
+            }),
+          );
+        };
 
         // The draft the page is showing, in the same shape the server stores.
         const draft = () => ({
+          ...Object.fromEntries(
+            [...extra.entries()].map(function (pair) {
+              return [pair[0], pair[1].value];
+            }),
+          ),
           "email.confirm.enabled": $("enabled").checked ? "on" : "off",
           "email.confirm.subject": $("subject").value,
           "email.confirm.intro": $("intro").value,
@@ -592,10 +679,20 @@
           $("saveBtn").disabled = true;
           say("Saving...", true);
           try {
-            await request("/api/content", {
-              method: "PATCH",
-              body: JSON.stringify({ updates: draft() }),
-            });
+            // only what changed since the page loaded or last saved, since
+            // each setting is its own write
+            const now = draft();
+            const changed = Object.fromEntries(
+              Object.entries(now).filter(function (pair) {
+                return saved[pair[0]] !== pair[1];
+              }),
+            );
+            if (Object.keys(changed).length)
+              await request("/api/content", {
+                method: "PATCH",
+                body: JSON.stringify({ updates: changed }),
+              });
+            saved = now;
             say("Saved. The next approval uses this.", true);
           } catch (err) {
             say(err.message, false);
@@ -632,6 +729,8 @@
             $("notes").value = v["email.confirm.notes"] || "";
             $("signoff").value = v["email.confirm.signoff"] || "";
             buildGroups(cfg.fields || []);
+            buildWording(cfg.wording || [], cfg.shared || [], v);
+            saved = draft();
             if (cfg.mailUser)
               $("testBtn").textContent = "Send a test to " + cfg.mailUser;
             if (!cfg.mailReady)

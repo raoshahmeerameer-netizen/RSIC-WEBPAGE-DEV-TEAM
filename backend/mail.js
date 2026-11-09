@@ -138,6 +138,105 @@ const priceFor = (row, content) => {
 
 const DEFAULT_SIGNOFF = "The RSIC team";
 
+// ------------------------------------------------------- every other word
+// Every heading, label and small line in the confirmation is a setting of its
+// own (owner, 2026-11-09), stored as email.confirm.w.<id> and edited on the
+// Email page. The page builds its inputs from this list and the renderer reads
+// the same ids, so the two cannot drift apart. The defaults are the wording
+// the email always had. A required piece that is cleared falls back to its
+// default, because a section with no heading reads as a mistake; an optional
+// piece that is cleared is left out.
+const WORDING = [
+  {
+    title: "Top of the email",
+    items: [
+      ["brand", "Name at the very top", "RSIC"],
+      ["tagline", "Line under the name", "Different minds. One universe.", true],
+      ["title", "Title", "Registration confirmed"],
+      ["regno_label", "Label on the registration number box", "Registration number"],
+      ["greeting", "Greeting", "Dear {head_delegate},"],
+    ],
+  },
+  {
+    title: "Payment",
+    items: [
+      ["h_payment", "Heading", "Payment"],
+      ["amount_label", "Label on the amount box", "Amount to pay"],
+      ["price_line", "How the amount is worked out", "{count} delegates (head delegate included) x {per_delegate}{early_bird} + delegation fee {delegation_fee}", true],
+      ["early_bird", "Word added when the early bird fee applies", "early bird"],
+      ["amount_unknown", "Shown when the amount can't be worked out", "The amount will be confirmed to you separately."],
+    ],
+  },
+  {
+    title: "Delegation",
+    items: [
+      ["h_delegation", "Heading", "Delegation"],
+      ["l_school", "School label", "School"],
+      ["l_team", "Team name label", "Team name"],
+      ["l_delegates", "Number of delegates label", "Delegates"],
+    ],
+  },
+  {
+    title: "Realms",
+    items: [["h_realms", "Heading", "Realms entered ({count})"]],
+  },
+  {
+    title: "Supervisor and head delegate",
+    items: [
+      ["h_supervisor", "Supervisor heading", "Supervisor"],
+      ["h_head", "Head delegate heading", "Head delegate"],
+      ["l_name", "Name label", "Name"],
+      ["l_email", "Email label", "Email"],
+      ["l_phone", "Phone label", "Phone"],
+    ],
+  },
+  {
+    title: "Delegates",
+    items: [
+      ["h_delegates", "Heading", "Delegates ({count})"],
+      ["delegates_note", "Note under the names", "The head delegate is listed separately above.", true],
+    ],
+  },
+  {
+    title: "The event",
+    items: [
+      ["h_event", "Heading", "The event"],
+      ["l_dates", "Dates label", "Dates"],
+      ["l_venue", "Venue label", "Venue"],
+      ["l_map", "Map label", "Map"],
+      ["map_link", "Map link text", "Open in Google Maps"],
+    ],
+  },
+  {
+    title: "Contact and footer",
+    items: [
+      ["h_contact", "Contact heading", "Contact"],
+      ["l_contact", "Contact email label", "Email"],
+      ["footer", "Footer line", "Registration {reg_no}", true],
+    ],
+  },
+];
+
+const WORDING_KEYS = WORDING.reduce(
+  (all, g) => all.concat(g.items.map((i) => "email.confirm.w." + i[0])),
+  [],
+);
+
+// The words as they will be sent: stored value, else the default, with the
+// placeholders filled and line breaks flattened, since each is a single line.
+const wordingFor = (content, values) => {
+  const out = {};
+  WORDING.forEach((g) =>
+    g.items.forEach(([id, , fallback, optional]) => {
+      const raw = content && content["email.confirm.w." + id];
+      const stored = raw == null ? null : oneLine(raw);
+      const text = stored == null || (stored === "" && !optional) ? fallback : stored;
+      out[id] = oneLine(fill(text, values));
+    }),
+  );
+  return out;
+};
+
 const FALLBACK = {
   dates: "Friday 13 to Sunday 15 November 2026",
   venue: "The City School, Ravi Campus, Johar Town, Lahore",
@@ -310,24 +409,24 @@ const detailsOf = (row, content) => {
   };
 };
 
-// "5 delegates x PKR 2,000 (early bird) + delegation fee PKR 3,500"
-const priceLine = (p) => {
-  if (p.perDelegate == null || p.delegation == null) return "";
-  const who =
-    (p.charged === 1 ? "1 delegate" : p.charged + " delegates") +
-    " (head delegate included)";
-  return (
-    who +
-    " x " +
-    formatPkr(p.perDelegate) +
-    (p.tier === "early" ? " (early bird)" : "") +
-    " + delegation fee " +
-    formatPkr(p.delegation)
-  );
+// A {count} left in a heading is filled where the heading is drawn, since the
+// realms and the delegates each have their own number.
+const counted = (s, n) => String(s).split("{count}").join(String(n));
+
+// "5 delegates (head delegate included) x PKR 2,000 (early bird) + delegation
+// fee PKR 3,500", from the editable price_line template.
+const priceLine = (p, w) => {
+  if (p.perDelegate == null || p.delegation == null || !w.price_line) return "";
+  return fill(w.price_line, {
+    count: String(p.charged),
+    per_delegate: formatPkr(p.perDelegate),
+    early_bird: p.tier === "early" && w.early_bird ? " (" + w.early_bird + ")" : "",
+    delegation_fee: formatPkr(p.delegation),
+  });
 };
 
 // ------------------------------------------------------------- plain text
-const textVersion = (d, intro, notes, signoff, show) => {
+const textVersion = (d, intro, notes, signoff, show, w) => {
   const out = [];
   const rule = "------------------------------------------------------------";
   // A section only appears when something is left in it, so switching every
@@ -341,14 +440,16 @@ const textVersion = (d, intro, notes, signoff, show) => {
   const pair = (on, label, value) =>
     on && value ? "  " + (label + ":").padEnd(22) + value : "";
 
-  out.push("RSIC 2026");
-  out.push("Different minds. One universe.");
+  out.push(w.brand);
+  if (w.tagline) out.push(w.tagline);
   out.push("");
-  out.push("REGISTRATION CONFIRMED");
-  if (show("regno_box")) out.push("Registration number: " + d.regNo);
+  out.push(w.title.toUpperCase());
+  if (show("regno_box")) out.push(w.regno_label + ": " + d.regNo);
   out.push("");
-  out.push("Dear " + (d.head.name || "delegate") + ",");
-  out.push("");
+  if (w.greeting) {
+    out.push(w.greeting);
+    out.push("");
+  }
   out.push(intro);
 
   if (show("amount") || show("bank")) {
@@ -357,68 +458,69 @@ const textVersion = (d, intro, notes, signoff, show) => {
     if (show("amount")) {
       lines.push(
         p.amount != null
-          ? pair(true, "Amount to pay", formatPkr(p.amount))
-          : "  The amount will be confirmed to you separately.",
+          ? pair(true, w.amount_label, formatPkr(p.amount))
+          : "  " + w.amount_unknown,
       );
-      if (p.amount != null && priceLine(p)) lines.push("  " + priceLine(p));
+      if (p.amount != null && priceLine(p, w)) lines.push("  " + priceLine(p, w));
     }
     if (show("bank")) {
       // the *stars* that make a phrase bold pink in the HTML are dropped here
       if (d.instructions)
         lines.push("", d.instructions.replace(/\*([^*\n]+)\*/g, "$1"));
     }
-    block("Payment", lines);
+    block(w.h_payment, lines);
   }
 
-  block("Delegation", [
-    pair(show("school"), "School", d.school),
-    pair(show("team"), "Team name", d.team),
+  block(w.h_delegation, [
+    pair(show("school"), w.l_school, d.school),
+    pair(show("team"), w.l_team, d.team),
     pair(
       show("delegate_count"),
-      "Delegates",
+      w.l_delegates,
       d.total != null ? String(d.total) : "",
     ),
   ]);
 
   if (show("realms") && d.realms.length)
     block(
-      "Realms entered (" + d.realms.length + ")",
+      counted(w.h_realms, d.realms.length),
       d.realms.map((r, i) => "  " + (i + 1) + ". " + r),
     );
 
-  block("Supervisor", [
-    pair(show("supervisor_name"), "Name", d.supervisor.name),
-    pair(show("supervisor_email"), "Email", d.supervisor.email),
-    pair(show("supervisor_phone"), "Phone", d.supervisor.phone),
+  block(w.h_supervisor, [
+    pair(show("supervisor_name"), w.l_name, d.supervisor.name),
+    pair(show("supervisor_email"), w.l_email, d.supervisor.email),
+    pair(show("supervisor_phone"), w.l_phone, d.supervisor.phone),
   ]);
 
-  block("Head delegate", [
-    pair(show("head_name"), "Name", d.head.name),
-    pair(show("head_email"), "Email", d.head.email),
-    pair(show("head_phone"), "Phone", d.head.phone),
+  block(w.h_head, [
+    pair(show("head_name"), w.l_name, d.head.name),
+    pair(show("head_email"), w.l_email, d.head.email),
+    pair(show("head_phone"), w.l_phone, d.head.phone),
   ]);
 
   if (show("delegates") && d.others.length)
     block(
-      "Delegates (" + d.others.length + ")",
+      counted(w.h_delegates, d.others.length),
       d.others
         .map((n, i) => "  " + (i + 1) + ". " + n)
-        .concat(["", "  The head delegate is listed separately above."]),
+        .concat(w.delegates_note ? ["", "  " + w.delegates_note] : []),
     );
 
-  block("The event", [
-    pair(show("dates"), "Dates", d.dates),
-    pair(show("venue"), "Venue", d.venue),
-    pair(show("map"), "Map", d.map),
+  block(w.h_event, [
+    pair(show("dates"), w.l_dates, d.dates),
+    pair(show("venue"), w.l_venue, d.venue),
+    pair(show("map"), w.l_map, d.map),
   ]);
 
-  block("Contact", [pair(show("contact"), "Email", d.contact)]);
+  block(w.h_contact, [pair(show("contact"), w.l_contact, d.contact)]);
 
   out.push("", rule, "");
   out.push(notes);
   out.push("");
   out.push(signoff);
   out.push("");
+  if (w.footer) out.push(w.footer);
   out.push("https://cityrsic.com");
   return out.join("\n");
 };
@@ -573,7 +675,7 @@ const callout = (text) => {
 
 // The amount sits in its own box, the same shape as the registration number,
 // because it is the one figure the school has to act on.
-const paymentHtml = (d, show) => {
+const paymentHtml = (d, show, w) => {
   if (!show("amount") && !show("bank")) return "";
   const p = d.price;
   let out = "";
@@ -586,35 +688,37 @@ const paymentHtml = (d, show) => {
           SANS +
           ";font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:" +
           C.soft +
-          '">Amount to pay<div style="font-family:' +
+          '">' +
+          escapeHtml(w.amount_label) +
+          '<div style="font-family:' +
           SERIF +
           ";font-size:26px;color:" +
           C.pink +
           ';margin-top:4px;letter-spacing:0;text-transform:none">' +
           escapeHtml(formatPkr(p.amount)) +
           "</div></td></tr></table>" +
-          (priceLine(p)
+          (priceLine(p, w)
             ? '<p style="margin:10px 0 0;font-family:' +
               SANS +
               ";font-size:12px;color:" +
               C.soft +
               '">' +
-              escapeHtml(priceLine(p)) +
+              escapeHtml(priceLine(p, w)) +
               "</p>"
             : "") +
           "</td></tr>"
         : '<tr><td style="padding-top:8px">' +
-          paras("The amount will be confirmed to you separately.") +
+          paras(w.amount_unknown) +
           "</td></tr>";
   }
   if (show("bank")) {
     if (d.instructions)
       out += callout(d.instructions);
   }
-  return out ? heading("Payment") + out : "";
+  return out ? heading(w.h_payment) + out : "";
 };
 
-const htmlVersion = (d, intro, notes, signoff, show) => {
+const htmlVersion = (d, intro, notes, signoff, show, w) => {
   // A heading is only emitted when its table has rows, so switching every field
   // in a section off takes the heading with it rather than leaving an empty one.
   const section = (title, pairsList) => {
@@ -627,11 +731,15 @@ const htmlVersion = (d, intro, notes, signoff, show) => {
         escapeHtml(d.map) +
         '" style="color:' +
         C.pink +
-        ';text-decoration:none;font-weight:700">Open in Google Maps</a>'
+        ';text-decoration:none;font-weight:700">' +
+        escapeHtml(w.map_link || "Open in Google Maps") +
+        "</a>"
       : "";
 
   const parts = [
-    '<!doctype html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>RSIC 2026 registration confirmed</title></head>',
+    '<!doctype html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>' +
+      escapeHtml(w.brand + " " + w.title) +
+      "</title></head>",
     '<body style="margin:0;padding:0;background:' +
       C.page +
       ';-webkit-text-size-adjust:100%">',
@@ -648,14 +756,20 @@ const htmlVersion = (d, intro, notes, signoff, show) => {
       SERIF +
       ";font-size:27px;color:" +
       C.text +
-      '">RSIC<span style="color:' +
+      '">' +
+      escapeHtml(w.brand) +
+      '<span style="color:' +
       C.pink +
       '">.</span></td></tr>',
-    '<tr><td style="font-family:' +
-      SERIF +
-      ";font-style:italic;font-size:14px;color:" +
-      C.pink +
-      ';padding-top:2px">Different minds. One universe.</td></tr>',
+    !w.tagline
+      ? ""
+      : '<tr><td style="font-family:' +
+        SERIF +
+        ";font-style:italic;font-size:14px;color:" +
+        C.pink +
+        ';padding-top:2px">' +
+        escapeHtml(w.tagline) +
+        "</td></tr>",
     '<tr><td style="padding-top:20px"><div style="height:1px;background:' +
       C.line +
       '"></div></td></tr>',
@@ -665,7 +779,9 @@ const htmlVersion = (d, intro, notes, signoff, show) => {
       SERIF +
       ";font-size:22px;color:" +
       C.text +
-      '">Registration confirmed</td></tr>',
+      '">' +
+      escapeHtml(w.title) +
+      "</td></tr>",
     !show("regno_box")
       ? ""
       : '<tr><td style="padding-top:14px"><table role="presentation" cellpadding="0" cellspacing="0" style="background:' +
@@ -674,7 +790,9 @@ const htmlVersion = (d, intro, notes, signoff, show) => {
       SANS +
       ";font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:" +
       C.soft +
-      '">Registration number<div style="font-family:' +
+      '">' +
+      escapeHtml(w.regno_label) +
+      '<div style="font-family:' +
       SERIF +
       ";font-size:28px;color:" +
       C.pink +
@@ -683,69 +801,69 @@ const htmlVersion = (d, intro, notes, signoff, show) => {
       "</div></td></tr></table></td></tr>",
 
     // salutation and the editable opening
-    '<tr><td style="padding-top:24px;font-family:' +
-      SANS +
-      ";font-size:15px;color:" +
-      C.text +
-      ';font-weight:700">Dear ' +
-      escapeHtml(d.head.name || "delegate") +
-      ",</td></tr>",
+    !w.greeting
+      ? ""
+      : '<tr><td style="padding-top:24px;font-family:' +
+        SANS +
+        ";font-size:15px;color:" +
+        C.text +
+        ';font-weight:700">' +
+        escapeHtml(w.greeting) +
+        "</td></tr>",
     '<tr><td style="padding-top:12px">' + paras(intro) + "</td></tr>",
 
-    paymentHtml(d, show),
+    paymentHtml(d, show, w),
 
     // The registration number is not repeated here: it has its own box above
     // and the footer carries it again.
-    section("Delegation", [
-      ["School", show("school") ? d.school : ""],
-      ["Team name", show("team") ? d.team : ""],
+    section(w.h_delegation, [
+      [w.l_school, show("school") ? d.school : ""],
+      [w.l_team, show("team") ? d.team : ""],
       [
-        "Delegates",
+        w.l_delegates,
         show("delegate_count") && d.total != null ? String(d.total) : "",
       ],
     ]),
   ];
 
   if (show("realms") && d.realms.length) {
-    parts.push(heading("Realms entered (" + d.realms.length + ")"));
+    parts.push(heading(counted(w.h_realms, d.realms.length)));
     parts.push(numbered(d.realms, ""));
   }
 
   parts.push(
-    section("Supervisor", [
-      ["Name", show("supervisor_name") ? d.supervisor.name : ""],
-      ["Email", show("supervisor_email") ? d.supervisor.email : ""],
-      ["Phone", show("supervisor_phone") ? d.supervisor.phone : ""],
+    section(w.h_supervisor, [
+      [w.l_name, show("supervisor_name") ? d.supervisor.name : ""],
+      [w.l_email, show("supervisor_email") ? d.supervisor.email : ""],
+      [w.l_phone, show("supervisor_phone") ? d.supervisor.phone : ""],
     ]),
   );
 
   parts.push(
-    section("Head delegate", [
-      ["Name", show("head_name") ? d.head.name : ""],
-      ["Email", show("head_email") ? d.head.email : ""],
-      ["Phone", show("head_phone") ? d.head.phone : ""],
+    section(w.h_head, [
+      [w.l_name, show("head_name") ? d.head.name : ""],
+      [w.l_email, show("head_email") ? d.head.email : ""],
+      [w.l_phone, show("head_phone") ? d.head.phone : ""],
     ]),
   );
 
   if (show("delegates") && d.others.length) {
-    parts.push(heading("Delegates (" + d.others.length + ")"));
-    parts.push(
-      numbered(d.others, "The head delegate is listed separately above."),
-    );
+    parts.push(heading(counted(w.h_delegates, d.others.length)));
+    parts.push(numbered(d.others, w.delegates_note));
   }
 
   parts.push(
-    section("The event", [
-      ["Dates", show("dates") ? d.dates : ""],
-      ["Venue", show("venue") ? d.venue : ""],
-      ["Map", mapLink ? "link" : "", mapLink],
+    section(w.h_event, [
+      [w.l_dates, show("dates") ? d.dates : ""],
+      [w.l_venue, show("venue") ? d.venue : ""],
+      [w.l_map, mapLink ? "link" : "", mapLink],
     ]),
   );
 
   parts.push(
-    section("Contact", [
+    section(w.h_contact, [
       [
-        "Email",
+        w.l_contact,
         show("contact") ? d.contact : "",
         '<a href="mailto:' +
           escapeHtml(d.contact) +
@@ -777,9 +895,9 @@ const htmlVersion = (d, intro, notes, signoff, show) => {
       SANS +
       ";font-size:12px;color:" +
       C.soft +
-      '">Registration ' +
-      escapeHtml(d.regNo) +
-      ' &middot; <a href="https://cityrsic.com" style="color:' +
+      '">' +
+      (w.footer ? escapeHtml(w.footer) + " &middot; " : "") +
+      '<a href="https://cityrsic.com" style="color:' +
       C.pink +
       ';text-decoration:none">cityrsic.com</a></td></tr>',
     "</table></td></tr></table></body></html>",
@@ -846,11 +964,12 @@ const renderConfirmation = (row, content) => {
   const intro = fill(c["email.confirm.intro"] || DEFAULT_INTRO, values);
   const notes = fill(c["email.confirm.notes"] || DEFAULT_NOTES, values);
   const signoff = fill(c["email.confirm.signoff"] || DEFAULT_SIGNOFF, values);
+  const w = wordingFor(c, values);
 
   return {
     subject,
-    text: textVersion(d, intro, notes, signoff, show),
-    html: htmlVersion(d, intro, notes, signoff, show),
+    text: textVersion(d, intro, notes, signoff, show, w),
+    html: htmlVersion(d, intro, notes, signoff, show, w),
   };
 };
 
@@ -1127,6 +1246,8 @@ module.exports = {
   mailConfigured,
   FIELD_GROUPS,
   ALL_FIELDS,
+  WORDING,
+  WORDING_KEYS,
   MAIL_USER,
   MAIL_REPLY_TO,
 };

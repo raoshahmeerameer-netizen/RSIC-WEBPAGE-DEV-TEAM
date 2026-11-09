@@ -17,6 +17,8 @@ const {
   mailConfigured,
   FIELD_GROUPS,
   ALL_FIELDS,
+  WORDING,
+  WORDING_KEYS,
   MAIL_USER,
   MAIL_REPLY_TO,
   sendBonfire,
@@ -448,7 +450,20 @@ const EMAIL_KEYS = [
   "email.confirm.notes",
   "email.confirm.signoff",
   "email.confirm.fields",
+  ...WORDING_KEYS,
 ];
+
+// Details the email shows that are also on the website. They are edited on the
+// Email page too, so every word of the email can be changed from one place,
+// and the page says that changing them changes the site as well.
+const SHARED_EMAIL_KEYS = [
+  ["event.dates", "Event dates"],
+  ["event.venue", "Venue"],
+  ["event.map_url", "Google Maps link"],
+  ["contact.email", "Contact email address"],
+  ["payment.instructions", "How to pay (the pink box)", true],
+];
+EMAIL_KEYS.push(...SHARED_EMAIL_KEYS.map((k) => k[0]));
 
 // The draft the page is showing, laid over the stored settings, so a preview
 // reflects unsaved edits without writing them to the database first.
@@ -467,6 +482,8 @@ app.get("/api/admin/email-config", requireAdmin, async (_req, res) => {
     const stored = content["email.confirm.fields"];
     res.json({
       groups: FIELD_GROUPS,
+      wording: WORDING,
+      shared: SHARED_EMAIL_KEYS,
       // null means nothing has been chosen yet, which the renderer reads as
       // everything on, so the page ticks every box to match.
       fields:
