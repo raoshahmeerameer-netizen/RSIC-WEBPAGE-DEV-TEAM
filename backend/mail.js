@@ -217,6 +217,41 @@ const WORDING = [
   },
 ];
 
+// ------------------------------------------------------------ special notes
+// Up to three notes of the owner's own (2026-11-09), each placed wherever they
+// choose. They are drawn in the same pink-edged box as the payment
+// instructions, with *stars* for bold pink, and an empty note is not sent.
+const NOTE_POSITIONS = [
+  ["top", "At the very top, above the title"],
+  ["after_intro", "After the opening"],
+  ["after_payment", "After Payment"],
+  ["after_delegation", "After Delegation"],
+  ["after_realms", "After Realms entered"],
+  ["after_supervisor", "After Supervisor"],
+  ["after_head", "After Head delegate"],
+  ["after_delegates", "After Delegates"],
+  ["after_event", "After The event"],
+  ["after_contact", "After Contact"],
+  ["before_signoff", "After the closing, before the sign off"],
+  ["bottom", "At the very bottom"],
+];
+const NOTE_SLOTS = 3;
+const NOTE_KEYS = [];
+for (let i = 1; i <= NOTE_SLOTS; i++)
+  NOTE_KEYS.push("email.confirm.note" + i + ".text", "email.confirm.note" + i + ".at");
+
+const notesFor = (content, values) => {
+  const ids = NOTE_POSITIONS.map((p) => p[0]);
+  const out = [];
+  for (let i = 1; i <= NOTE_SLOTS; i++) {
+    const text = String((content && content["email.confirm.note" + i + ".text"]) || "").trim();
+    if (!text) continue;
+    const at = String((content && content["email.confirm.note" + i + ".at"]) || "").trim();
+    out.push({ text: fill(text, values), at: ids.indexOf(at) !== -1 ? at : "after_intro" });
+  }
+  return out;
+};
+
 const WORDING_KEYS = WORDING.reduce(
   (all, g) => all.concat(g.items.map((i) => "email.confirm.w." + i[0])),
   [],
@@ -426,9 +461,14 @@ const priceLine = (p, w) => {
 };
 
 // ------------------------------------------------------------- plain text
-const textVersion = (d, intro, notes, signoff, show, w) => {
+const textVersion = (d, intro, notes, signoff, show, w, special) => {
   const out = [];
   const rule = "------------------------------------------------------------";
+  // a special note placed here, if any, with the *stars* dropped
+  const noteAt = (at) =>
+    (special || [])
+      .filter((n) => n.at === at)
+      .forEach((n) => out.push("", n.text.replace(/\*([^*\n]+)\*/g, "$1"), ""));
   // A section only appears when something is left in it, so switching every
   // field off removes the heading too rather than leaving an empty one.
   const block = (title, lines) => {
@@ -442,6 +482,7 @@ const textVersion = (d, intro, notes, signoff, show, w) => {
 
   out.push(w.brand);
   if (w.tagline) out.push(w.tagline);
+  noteAt("top");
   out.push("");
   out.push(w.title.toUpperCase());
   if (show("regno_box")) out.push(w.regno_label + ": " + d.regNo);
@@ -451,6 +492,7 @@ const textVersion = (d, intro, notes, signoff, show, w) => {
     out.push("");
   }
   out.push(intro);
+  noteAt("after_intro");
 
   if (show("amount") || show("bank")) {
     const p = d.price;
@@ -470,6 +512,7 @@ const textVersion = (d, intro, notes, signoff, show, w) => {
     }
     block(w.h_payment, lines);
   }
+  noteAt("after_payment");
 
   block(w.h_delegation, [
     pair(show("school"), w.l_school, d.school),
@@ -480,24 +523,28 @@ const textVersion = (d, intro, notes, signoff, show, w) => {
       d.total != null ? String(d.total) : "",
     ),
   ]);
+  noteAt("after_delegation");
 
   if (show("realms") && d.realms.length)
     block(
       counted(w.h_realms, d.realms.length),
       d.realms.map((r, i) => "  " + (i + 1) + ". " + r),
     );
+  noteAt("after_realms");
 
   block(w.h_supervisor, [
     pair(show("supervisor_name"), w.l_name, d.supervisor.name),
     pair(show("supervisor_email"), w.l_email, d.supervisor.email),
     pair(show("supervisor_phone"), w.l_phone, d.supervisor.phone),
   ]);
+  noteAt("after_supervisor");
 
   block(w.h_head, [
     pair(show("head_name"), w.l_name, d.head.name),
     pair(show("head_email"), w.l_email, d.head.email),
     pair(show("head_phone"), w.l_phone, d.head.phone),
   ]);
+  noteAt("after_head");
 
   if (show("delegates") && d.others.length)
     block(
@@ -506,22 +553,27 @@ const textVersion = (d, intro, notes, signoff, show, w) => {
         .map((n, i) => "  " + (i + 1) + ". " + n)
         .concat(w.delegates_note ? ["", "  " + w.delegates_note] : []),
     );
+  noteAt("after_delegates");
 
   block(w.h_event, [
     pair(show("dates"), w.l_dates, d.dates),
     pair(show("venue"), w.l_venue, d.venue),
     pair(show("map"), w.l_map, d.map),
   ]);
+  noteAt("after_event");
 
   block(w.h_contact, [pair(show("contact"), w.l_contact, d.contact)]);
+  noteAt("after_contact");
 
   out.push("", rule, "");
   out.push(notes);
+  noteAt("before_signoff");
   out.push("");
   out.push(signoff);
   out.push("");
   if (w.footer) out.push(w.footer);
   out.push("https://cityrsic.com");
+  noteAt("bottom");
   return out.join("\n");
 };
 
@@ -718,7 +770,13 @@ const paymentHtml = (d, show, w) => {
   return out ? heading(w.h_payment) + out : "";
 };
 
-const htmlVersion = (d, intro, notes, signoff, show, w) => {
+const htmlVersion = (d, intro, notes, signoff, show, w, special) => {
+  // the special notes placed here, each in the pink-edged box
+  const noteAt = (at) =>
+    (special || [])
+      .filter((n) => n.at === at)
+      .map((n) => callout(n.text))
+      .join("");
   // A heading is only emitted when its table has rows, so switching every field
   // in a section off takes the heading with it rather than leaving an empty one.
   const section = (title, pairsList) => {
@@ -770,6 +828,7 @@ const htmlVersion = (d, intro, notes, signoff, show, w) => {
         ';padding-top:2px">' +
         escapeHtml(w.tagline) +
         "</td></tr>",
+    noteAt("top"),
     '<tr><td style="padding-top:20px"><div style="height:1px;background:' +
       C.line +
       '"></div></td></tr>',
@@ -811,8 +870,10 @@ const htmlVersion = (d, intro, notes, signoff, show, w) => {
         escapeHtml(w.greeting) +
         "</td></tr>",
     '<tr><td style="padding-top:12px">' + paras(intro) + "</td></tr>",
+    noteAt("after_intro"),
 
     paymentHtml(d, show, w),
+    noteAt("after_payment"),
 
     // The registration number is not repeated here: it has its own box above
     // and the footer carries it again.
@@ -824,12 +885,14 @@ const htmlVersion = (d, intro, notes, signoff, show, w) => {
         show("delegate_count") && d.total != null ? String(d.total) : "",
       ],
     ]),
+    noteAt("after_delegation"),
   ];
 
   if (show("realms") && d.realms.length) {
     parts.push(heading(counted(w.h_realms, d.realms.length)));
     parts.push(numbered(d.realms, ""));
   }
+  parts.push(noteAt("after_realms"));
 
   parts.push(
     section(w.h_supervisor, [
@@ -837,6 +900,7 @@ const htmlVersion = (d, intro, notes, signoff, show, w) => {
       [w.l_email, show("supervisor_email") ? d.supervisor.email : ""],
       [w.l_phone, show("supervisor_phone") ? d.supervisor.phone : ""],
     ]),
+    noteAt("after_supervisor"),
   );
 
   parts.push(
@@ -845,12 +909,14 @@ const htmlVersion = (d, intro, notes, signoff, show, w) => {
       [w.l_email, show("head_email") ? d.head.email : ""],
       [w.l_phone, show("head_phone") ? d.head.phone : ""],
     ]),
+    noteAt("after_head"),
   );
 
   if (show("delegates") && d.others.length) {
     parts.push(heading(counted(w.h_delegates, d.others.length)));
     parts.push(numbered(d.others, w.delegates_note));
   }
+  parts.push(noteAt("after_delegates"));
 
   parts.push(
     section(w.h_event, [
@@ -858,6 +924,7 @@ const htmlVersion = (d, intro, notes, signoff, show, w) => {
       [w.l_venue, show("venue") ? d.venue : ""],
       [w.l_map, mapLink ? "link" : "", mapLink],
     ]),
+    noteAt("after_event"),
   );
 
   parts.push(
@@ -874,6 +941,7 @@ const htmlVersion = (d, intro, notes, signoff, show, w) => {
           "</a>",
       ],
     ]),
+    noteAt("after_contact"),
   );
 
   parts.push(
@@ -881,6 +949,7 @@ const htmlVersion = (d, intro, notes, signoff, show, w) => {
       C.line +
       '"></div></td></tr>',
     '<tr><td style="padding-top:22px">' + paras(notes) + "</td></tr>",
+    noteAt("before_signoff"),
     '<tr><td style="padding-top:14px;font-family:' +
       SERIF +
       ";font-style:italic;font-size:17px;color:" +
@@ -900,6 +969,7 @@ const htmlVersion = (d, intro, notes, signoff, show, w) => {
       '<a href="https://cityrsic.com" style="color:' +
       C.pink +
       ';text-decoration:none">cityrsic.com</a></td></tr>',
+    noteAt("bottom"),
     "</table></td></tr></table></body></html>",
   );
 
@@ -965,11 +1035,12 @@ const renderConfirmation = (row, content) => {
   const notes = fill(c["email.confirm.notes"] || DEFAULT_NOTES, values);
   const signoff = fill(c["email.confirm.signoff"] || DEFAULT_SIGNOFF, values);
   const w = wordingFor(c, values);
+  const special = notesFor(c, values);
 
   return {
     subject,
-    text: textVersion(d, intro, notes, signoff, show, w),
-    html: htmlVersion(d, intro, notes, signoff, show, w),
+    text: textVersion(d, intro, notes, signoff, show, w, special),
+    html: htmlVersion(d, intro, notes, signoff, show, w, special),
   };
 };
 
@@ -1248,6 +1319,9 @@ module.exports = {
   ALL_FIELDS,
   WORDING,
   WORDING_KEYS,
+  NOTE_POSITIONS,
+  NOTE_SLOTS,
+  NOTE_KEYS,
   MAIL_USER,
   MAIL_REPLY_TO,
 };

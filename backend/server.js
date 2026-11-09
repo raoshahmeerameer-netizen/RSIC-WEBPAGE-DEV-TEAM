@@ -19,6 +19,9 @@ const {
   ALL_FIELDS,
   WORDING,
   WORDING_KEYS,
+  NOTE_POSITIONS,
+  NOTE_SLOTS,
+  NOTE_KEYS,
   MAIL_USER,
   MAIL_REPLY_TO,
   sendBonfire,
@@ -451,6 +454,7 @@ const EMAIL_KEYS = [
   "email.confirm.signoff",
   "email.confirm.fields",
   ...WORDING_KEYS,
+  ...NOTE_KEYS,
 ];
 
 // Details the email shows that are also on the website. They are edited on the
@@ -484,6 +488,8 @@ app.get("/api/admin/email-config", requireAdmin, async (_req, res) => {
       groups: FIELD_GROUPS,
       wording: WORDING,
       shared: SHARED_EMAIL_KEYS,
+      notePositions: NOTE_POSITIONS,
+      noteSlots: NOTE_SLOTS,
       // null means nothing has been chosen yet, which the renderer reads as
       // everything on, so the page ticks every box to match.
       fields:

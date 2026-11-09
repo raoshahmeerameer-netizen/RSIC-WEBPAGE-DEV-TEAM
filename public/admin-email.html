@@ -216,6 +216,7 @@
         margin-bottom: 6px;
       }
       input[type="text"],
+      select,
       textarea {
         width: 100%;
         background: var(--raised);
@@ -230,7 +231,11 @@
         min-height: 150px;
         resize: vertical;
       }
+      #specialNotes textarea {
+        min-height: 90px;
+      }
       input:focus,
+      select:focus,
       textarea:focus {
         outline: 0;
         border-color: var(--pink);
@@ -414,6 +419,20 @@
         </div>
 
         <div class="panel">
+          <h2>Special notes</h2>
+          <p class="lede">
+            Anything extra you want every school to read, in a pink box, placed
+            wherever you choose. A note left empty is not sent.
+          </p>
+          <div id="specialNotes"></div>
+          <p class="hint">
+            Put <code>*stars*</code> around a phrase to make it bold pink. The
+            placeholders listed above work here too, for example
+            <code>{school}</code> or <code>{reg_no}</code>.
+          </p>
+        </div>
+
+        <div class="panel">
           <h2>Every other word</h2>
           <p class="lede">
             Each heading, label and small line in the email, in the order they
@@ -532,6 +551,51 @@
           f.append(l, input);
           wrap.append(f);
           extra.set(key, input);
+        };
+
+        const buildNotes = (slots, positions, values) => {
+          // "notes" is already the closing paragraphs' box, so not that id
+          const wrap = $("specialNotes");
+          wrap.replaceChildren();
+          for (let i = 1; i <= slots; i++) {
+            const sec = document.createElement("div");
+            sec.className = "group";
+            const head = document.createElement("div");
+            head.className = "group-head";
+            const title = document.createElement("span");
+            title.className = "group-title";
+            title.textContent = "Note " + i;
+            head.append(title);
+            sec.append(head);
+
+            const textKey = "email.confirm.note" + i + ".text";
+            addField(sec, textKey, "What it says", values[textKey] || "", {
+              multiline: true,
+            });
+
+            const atKey = "email.confirm.note" + i + ".at";
+            const f = document.createElement("div");
+            f.className = "field";
+            const l = document.createElement("label");
+            l.htmlFor = "x-" + atKey;
+            l.textContent = "Where it goes";
+            const sel = document.createElement("select");
+            sel.id = "x-" + atKey;
+            positions.forEach((p) => {
+              const o = document.createElement("option");
+              o.value = p[0];
+              o.textContent = p[1];
+              sel.append(o);
+            });
+            sel.value = values[atKey] || "after_intro";
+            if (!sel.value) sel.value = "after_intro";
+            sel.addEventListener("change", schedulePreview);
+            f.append(l, sel);
+            sec.append(f);
+            extra.set(atKey, sel);
+
+            wrap.append(sec);
+          }
         };
 
         const buildWording = (wording, shared, values) => {
@@ -729,6 +793,7 @@
             $("notes").value = v["email.confirm.notes"] || "";
             $("signoff").value = v["email.confirm.signoff"] || "";
             buildGroups(cfg.fields || []);
+            buildNotes(cfg.noteSlots || 0, cfg.notePositions || [], v);
             buildWording(cfg.wording || [], cfg.shared || [], v);
             saved = draft();
             if (cfg.mailUser)
