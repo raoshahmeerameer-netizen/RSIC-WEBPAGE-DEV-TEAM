@@ -210,10 +210,9 @@ if (
   // realm pages link here with ?realm=key, which ticks that realm
   const wantedRealm = new URLSearchParams(location.search).get("realm");
   if (wantedRealm) {
-    // a realm page may link to a core realm as well as an optional one
+    // the compulsory realms are always ticked, so only an optional one needs it
     const box = document.querySelector(
-      `#registrationForm input[name="realms"][value="${CSS.escape(wantedRealm)}"],` +
-        `#registrationForm input[name="coreRealm"][value="${CSS.escape(wantedRealm)}"]`,
+      `#registrationForm input[name="realms"][value="${CSS.escape(wantedRealm)}"]`,
     );
     if (box && !box.disabled) {
       box.checked = true;
@@ -1305,9 +1304,10 @@ rsicContentReady.then((content) => {
 });
 
 // ---------------------------------------------------------------- registration
-// One route only: a school registers a delegation. It takes exactly one core
-// realm, either Project Nexus or Gaia's Exchange, which are alternatives, and
-// then picks the rest from the others, within the limits the admin sets.
+// One route only: a school registers a delegation. Project Nexus and Gaia's
+// Exchange are compulsory for everyone (ticked and locked), and the rest are
+// picked from the other nine, within the limits the admin sets. The limits
+// are totals that count the compulsory two.
 const regForm = document.getElementById("registrationForm");
 const regStatus = document.getElementById("regStatus");
 const regNote = document.getElementById("regNote");
@@ -1324,22 +1324,23 @@ if (regForm) {
   const peopleList = document.getElementById("peopleList");
 
   const rules = {
-    realmsMin: 4,
-    realmsMax: 6,
+    realmsMin: 5,
+    realmsMax: 7,
     delegatesMin: 5,
     delegatesMax: 7,
   };
   let isOpen = false;
 
-  const corePicked = () => core.find((b) => b.checked) || null;
+  // the compulsory realms are always in, whatever the page's boxes say
+  core.forEach((b) => {
+    b.checked = true;
+    b.disabled = true;
+  });
 
-  const chosen = () =>
-    (corePicked() ? 1 : 0) + optional.filter((b) => b.checked).length;
+  const chosen = () => core.length + optional.filter((b) => b.checked).length;
 
   const realmsOk = () =>
-    !!corePicked() &&
-    chosen() >= rules.realmsMin &&
-    chosen() <= rules.realmsMax;
+    chosen() >= rules.realmsMin && chosen() <= rules.realmsMax;
 
   const delegatesOk = () => {
     const n = parseInt(delegates.value, 10);
@@ -1350,17 +1351,15 @@ if (regForm) {
 
   const paintTally = () => {
     const n = chosen();
-    const haveCore = !!corePicked();
-    tally.textContent = !haveCore
-      ? "Choose your core realm to start."
-      : n + " of " + rules.realmsMax + " realms chosen" +
-        (n < rules.realmsMin
-          ? ". Choose " + (rules.realmsMin - n) + " more."
-          : ".");
+    tally.textContent =
+      n + " of " + rules.realmsMax + " realms chosen" +
+      (n < rules.realmsMin
+        ? ". Choose " + (rules.realmsMin - n) + " more."
+        : ".");
     tally.classList.toggle("is-bad", !realmsOk());
     // stop people going over the limit rather than telling them off afterwards
     optional.forEach((b) => {
-      b.disabled = !b.checked && (!haveCore || n >= rules.realmsMax);
+      b.disabled = !b.checked && n >= rules.realmsMax;
       b.closest(".realm-pick").classList.toggle("is-full", b.disabled);
       b.closest(".realm-pick").classList.toggle("is-on", b.checked);
     });
@@ -1489,8 +1488,8 @@ if (regForm) {
       const n = parseInt(content[key], 10);
       return Number.isFinite(n) ? n : fallback;
     };
-    rules.realmsMin = num("registration.realms_min", 4);
-    rules.realmsMax = num("registration.realms_max", 6);
+    rules.realmsMin = num("registration.realms_min", 5);
+    rules.realmsMax = num("registration.realms_max", 7);
     rules.delegatesMin = num("registration.delegates_min", 5);
     rules.delegatesMax = num("registration.delegates_max", 7);
     delegates.min = rules.delegatesMin;
@@ -1499,8 +1498,8 @@ if (regForm) {
       rules.delegatesMin + " to " + rules.delegatesMax + " delegates.";
     if (extrasHead)
       extrasHead.textContent =
-        "Then choose " + (rules.realmsMin - 1) +
-        " to " + (rules.realmsMax - 1) + " more";
+        "Then choose " + (rules.realmsMin - core.length) +
+        " to " + (rules.realmsMax - core.length) + " more";
     paintTally();
   };
 
@@ -1609,12 +1608,11 @@ if (regForm) {
       problems.push(
         "between " + rules.delegatesMin + " and " + rules.delegatesMax + " delegates",
       );
-    if (!corePicked())
-      problems.push("one core realm, either Project Nexus or Gaia's Exchange");
-    else if (!realmsOk())
+    if (!realmsOk())
       problems.push(
-        "between " + (rules.realmsMin - 1) + " and " + (rules.realmsMax - 1) +
-          " more realms on top of your core realm",
+        "between " + (rules.realmsMin - core.length) + " and " +
+          (rules.realmsMax - core.length) +
+          " more realms on top of Project Nexus and Gaia's Exchange",
       );
     if (delegatesOk() && !peopleOk())
       problems.push(
@@ -1664,7 +1662,7 @@ if (regForm) {
       },
       delegates: value("s-delegates"),
       realms: [
-        ...(corePicked() ? [corePicked().value] : []),
+        ...core.map((b) => b.value),
         ...optional.filter((b) => b.checked).map((b) => b.value),
       ],
       people: peopleValues(),

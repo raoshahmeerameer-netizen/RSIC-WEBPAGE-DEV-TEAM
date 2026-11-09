@@ -664,8 +664,8 @@ app.post("/api/register", upload.any(), async (req, res) => {
       const n = parseInt(content[key], 10);
       return Number.isFinite(n) ? n : fallback;
     };
-    const realmsMin = num("registration.realms_min", 4);
-    const realmsMax = num("registration.realms_max", 6);
+    const realmsMin = num("registration.realms_min", 5);
+    const realmsMax = num("registration.realms_max", 7);
     const delegatesMin = num("registration.delegates_min", 5);
     const delegatesMax = num("registration.delegates_max", 7);
     const compulsory = String(content["registration.compulsory"] || "pure,business")
@@ -738,31 +738,24 @@ app.post("/api/register", upload.any(), async (req, res) => {
       });
     }
 
-    // Unknown keys are dropped and duplicates collapsed. Exactly one of the
-    // core realms is required and they are alternatives, so a delegation can
-    // never hold both; the rest come from the other realms.
+    // Unknown keys are dropped and duplicates collapsed. The compulsory realms
+    // are added for every delegation whatever was sent, and the limits are
+    // totals that count them, so the extras are what the school chose.
     const picked = Array.isArray(req.body.realms) ? req.body.realms : [];
     const clean = [
       ...new Set(picked.filter((k) => REALM_KEYS.includes(k))),
     ];
-    const core = clean.filter((k) => compulsory.includes(k));
+    const core = compulsory.filter((k) => REALM_KEYS.includes(k));
     const extras = clean.filter((k) => !compulsory.includes(k));
     const label = (k) => content["realm." + k + ".name"] || k;
-
-    if (core.length !== 1)
-      return res.status(400).json({
-        error:
-          "Choose one core realm, either " +
-          compulsory.map(label).join(" or ") +
-          ", and only one.",
-      });
 
     const realms = [...core, ...extras];
     if (realms.length < realmsMin || realms.length > realmsMax)
       return res.status(400).json({
         error:
-          "Choose " + (realmsMin - 1) + " to " + (realmsMax - 1) +
-          " more realms on top of your core realm.",
+          "Choose " + (realmsMin - core.length) + " to " +
+          (realmsMax - core.length) + " more realms on top of " +
+          core.map(label).join(" and ") + ".",
       });
 
     const clip = (v, n) => (v == null ? null : String(v).trim().slice(0, n));

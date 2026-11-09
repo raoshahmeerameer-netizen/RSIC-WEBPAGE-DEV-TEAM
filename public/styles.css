@@ -615,11 +615,12 @@ a.tile{text-decoration:none;color:inherit}
 .realm-pick b{font:600 .95rem/1.3 var(--sans);color:var(--text)}
 .realm-pick small{font:500 .8rem/1.3 var(--sans);color:var(--text-soft)}
 .realm-pick.is-on{border-color:var(--pink);background:rgba(208,118,143,.1)}
-/* the two core realms are alternatives: one is required, and taking one rules
-   the other out, so they are radios rather than tickboxes */
-.realm-pick.is-core b::after{content:"Core";display:inline-block;margin-left:8px;padding:2px 8px;
+/* the two compulsory realms are ticked and locked for every delegation; they
+   are disabled only so they can't be unticked, so they keep full strength */
+.realm-pick.is-core b::after{content:"Compulsory";display:inline-block;margin-left:8px;padding:2px 8px;
   border-radius:999px;font:600 .68rem/1.5 var(--sans);color:var(--pink);border:1px solid var(--pink)}
-.realm-pick.is-core input{border-radius:50%}
+.realm-pick.is-core{opacity:1;cursor:default}
+.realm-pick.is-core input:disabled{opacity:1}
 /* once the maximum is reached the rest stop responding, rather than erroring later */
 .realm-pick.is-full{opacity:.45;cursor:not-allowed}
 .realm-tally{margin:16px 0 0;font:600 .9rem/1.4 var(--sans);color:var(--text-soft)}
