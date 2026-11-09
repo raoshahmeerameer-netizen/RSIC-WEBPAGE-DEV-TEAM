@@ -74,7 +74,7 @@ const DEFAULT_SUBJECT =
 const DEFAULT_INTRO = [
   "Your delegation's registration for RSIC 2026 is confirmed.",
   "Your registration number is {reg_no}. Please quote it in any correspondence with us, and keep it with you on the day.",
-  "To complete your registration, please pay the amount set out below in cash, as explained under it. The details we hold for your delegation follow. Please check them.",
+  "To complete your registration, please pay the amount set out below, as explained under it. The details we hold for your delegation follow. Please check them.",
 ].join("\n\n");
 
 const DEFAULT_NOTES = [
@@ -296,7 +296,7 @@ const FIELD_GROUPS = [
     title: "Payment",
     fields: [
       ["amount", "Amount to pay, and how it is worked out"],
-      ["bank", "How to pay (cash only)"],
+      ["bank", "How to pay (the pink box)"],
     ],
   },
   {

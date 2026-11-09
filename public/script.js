@@ -1551,7 +1551,7 @@ if (regForm) {
       " (head delegate included) × " + pkrOf(perDelegate) +
       (early ? " (early bird, till " + dateLabel + ")" : "") +
       " + delegation fee " + pkrOf(delegation) +
-      ". Payment is cash only, made together by the whole delegation at The City School, Ravi Campus.";
+      ". Paid together by the whole delegation, in cash at The City School, Ravi Campus or as one bank transfer. See How to pay below.";
   };
   delegates.addEventListener("input", paintAmount);
 
@@ -1740,7 +1740,7 @@ if (regForm) {
         const owed = document.getElementById("regAmountTotal");
         const owedText =
           amountBox && !amountBox.hidden && owed && /PKR/.test(owed.textContent)
-            ? " Amount to pay: " + owed.textContent + ". Pay in cash, together as one delegation, at The City School, Ravi Campus, between 9:00 AM and 3:00 PM."
+            ? " Amount to pay: " + owed.textContent + ". Pay it together as one delegation, in cash at The City School, Ravi Campus between 9:00 AM and 3:00 PM, or as one bank transfer. The details are in your confirmation email."
             : "";
         regStatus.textContent = (data.message || "Registration received.") + owedText;
         regForm.reset();
