@@ -1537,9 +1537,20 @@ if (regForm) {
         "The delegation fee is " + pkrOf(delegation) +
         ", plus " + pkrOf(perDelegate) +
         (early ? " (early bird)" : "") +
-        " for each delegate, the head delegate included.";
+        " for each delegate, the head delegate included." +
+        (moneyOf(c["fee.security"])
+          ? " The " + pkrOf(moneyOf(c["fee.security"])) +
+            " security fee is separate, paid on the spot on the event day."
+          : "");
       return;
     }
+    // The security fee is a separate payment on top, made on the spot on the
+    // event day (owner, 2026-11-10), so it is named here but never added in.
+    const security = moneyOf(c["fee.security"]);
+    const securityNote = security
+      ? " Separate from this, every school also pays a " + pkrOf(security) +
+        " security fee on the spot on the event day."
+      : "";
     const charged = total;
     totalEl.textContent = pkrOf(charged * perDelegate + delegation);
     const dateLabel = new Date(day + "T12:00:00+05:00").toLocaleDateString(
@@ -1551,7 +1562,8 @@ if (regForm) {
       " (head delegate included) × " + pkrOf(perDelegate) +
       (early ? " (early bird, till " + dateLabel + ")" : "") +
       " + delegation fee " + pkrOf(delegation) +
-      ". Paid together by the whole delegation, in cash at The City School, Ravi Campus or as one bank transfer. See How to pay below.";
+      ". Paid together by the whole delegation, in cash at The City School, Ravi Campus or as one bank transfer. See How to pay below." +
+      securityNote;
   };
   delegates.addEventListener("input", paintAmount);
 

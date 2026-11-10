@@ -377,6 +377,7 @@ const REGI_KEYS = [
   "fee.early_bird",
   "fee.normal",
   "fee.delegation",
+  "fee.security",
   "event.registration_opens",
   "registration.open_note",
   "registration.closed_note",

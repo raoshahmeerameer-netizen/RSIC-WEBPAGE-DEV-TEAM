@@ -164,6 +164,7 @@ const WORDING = [
       ["amount_label", "Label on the amount box", "Amount to pay"],
       ["price_line", "How the amount is worked out", "{count} delegates (head delegate included) x {per_delegate}{early_bird} + delegation fee {delegation_fee}", true],
       ["early_bird", "Word added when the early bird fee applies", "early bird"],
+      ["security_line", "Line about the separate security fee", "Separate from this, every school also pays a {security_fee} security fee on the spot on the event day.", true],
       ["amount_unknown", "Shown when the amount can't be worked out", "The amount will be confirmed to you separately."],
     ],
   },
@@ -440,6 +441,7 @@ const detailsOf = (row, content) => {
     contact: setting(content, "contact.email", FALLBACK.contact),
     map: safeUrl(setting(content, "event.map_url", FALLBACK.map)),
     price: priceFor(row, content),
+    security: money(content && content["fee.security"]),
     instructions: String((content && content["payment.instructions"]) || "").trim(),
   };
 };
@@ -450,6 +452,13 @@ const counted = (s, n) => String(s).split("{count}").join(String(n));
 
 // "5 delegates (head delegate included) x PKR 2,000 (early bird) + delegation
 // fee PKR 3,500", from the editable price_line template.
+// The security fee is separate from the bill (owner, 2026-11-10): paid on the
+// spot on the event day, so it is named under the amount, never added to it.
+const securityLine = (d, w) =>
+  d.security != null && w.security_line
+    ? fill(w.security_line, { security_fee: formatPkr(d.security) })
+    : "";
+
 const priceLine = (p, w) => {
   if (p.perDelegate == null || p.delegation == null || !w.price_line) return "";
   return fill(w.price_line, {
@@ -504,6 +513,7 @@ const textVersion = (d, intro, notes, signoff, show, w, special) => {
           : "  " + w.amount_unknown,
       );
       if (p.amount != null && priceLine(p, w)) lines.push("  " + priceLine(p, w));
+      if (securityLine(d, w)) lines.push("  " + securityLine(d, w));
     }
     if (show("bank")) {
       // the *stars* that make a phrase bold pink in the HTML are dropped here
@@ -756,6 +766,15 @@ const paymentHtml = (d, show, w) => {
               C.soft +
               '">' +
               escapeHtml(priceLine(p, w)) +
+              "</p>"
+            : "") +
+          (securityLine(d, w)
+            ? '<p style="margin:8px 0 0;font-family:' +
+              SANS +
+              ";font-size:13px;color:" +
+              C.text +
+              '">' +
+              escapeHtml(securityLine(d, w)) +
               "</p>"
             : "") +
           "</td></tr>"
