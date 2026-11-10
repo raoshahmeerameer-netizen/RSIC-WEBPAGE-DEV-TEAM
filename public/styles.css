@@ -991,10 +991,19 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
    The Spooky Bonfire page (owner, 2026-11-06): the organisers' ticket art,
    the details as fact cards, how to pay, and a booking form built from the
    register page's own pieces. */
-.bonfire-ticket{margin:0;border-radius:var(--r-lg);overflow:hidden;box-shadow:0 22px 40px -26px rgba(3,8,20,.95)}
-.bonfire-ticket img{display:block;width:100%;height:auto}
+/* The organisers' portrait poster (owner, 2026-11-10) sits beside the details
+   on wide screens and above them on phones, held small enough to not fill
+   the whole screen. */
+.bonfire-layout{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:clamp(20px,3vw,40px);align-items:start}
+.bonfire-poster{display:block;margin:0;border-radius:var(--r-lg);overflow:hidden;box-shadow:0 22px 40px -26px rgba(3,8,20,.95)}
+.bonfire-poster img{display:block;width:100%;height:auto}
+.bonfire-side .reg-facts{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+@media (max-width:860px){
+  .bonfire-layout{grid-template-columns:1fr}
+  .bonfire-poster{width:100%;max-width:420px;justify-self:center}
+}
 .bonfire-who{margin-bottom:18px}
 /* booking stays off until the dashboard switch turns it on */
 #book[hidden],#bonfireBookCta[hidden]{display:none}
-a.bonfire-ticket{display:block}
+
 .bonfire-facts{margin-top:clamp(18px,2.4vw,28px)}
