@@ -164,7 +164,7 @@ const WORDING = [
       ["amount_label", "Label on the amount box", "Amount to pay"],
       ["price_line", "How the amount is worked out", "{count} delegates (head delegate included) x {per_delegate}{early_bird} + delegation fee {delegation_fee}", true],
       ["early_bird", "Word added when the early bird fee applies", "early bird"],
-      ["security_line", "Line about the separate security fee", "Separate from this, every school also pays a {security_fee} security fee on the spot on the event day.", true],
+      ["security_line", "Line about the separate security fee", "Separate from this, every school also pays a {security_fee} security fee on the spot on the event day. It is returned after the event, minus the cost of any damage to school property.", true],
       ["amount_unknown", "Shown when the amount can't be worked out", "The amount will be confirmed to you separately."],
     ],
   },

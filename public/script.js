@@ -1540,7 +1540,8 @@ if (regForm) {
         " for each delegate, the head delegate included." +
         (moneyOf(c["fee.security"])
           ? " The " + pkrOf(moneyOf(c["fee.security"])) +
-            " security fee is separate, paid on the spot on the event day."
+            " security fee is separate, paid on the spot on the event day." +
+            " It is returned after the event, minus the cost of any damage to school property."
           : "");
       return;
     }
@@ -1549,7 +1550,8 @@ if (regForm) {
     const security = moneyOf(c["fee.security"]);
     const securityNote = security
       ? " Separate from this, every school also pays a " + pkrOf(security) +
-        " security fee on the spot on the event day."
+        " security fee on the spot on the event day. It is returned after the" +
+        " event, minus the cost of any damage to school property."
       : "";
     const charged = total;
     totalEl.textContent = pkrOf(charged * perDelegate + delegation);
