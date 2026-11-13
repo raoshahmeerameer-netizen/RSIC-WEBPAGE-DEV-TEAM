@@ -626,7 +626,7 @@ const withStatus = (content) => {
       if (/^realm\.[a-z]+\.guide$/.test(k)) out[k] = "";
     });
   if (isPostponed(content)) {
-    out["registration.open"] = "off";
+    // registration keeps its own switch while postponed (owner, 2026-11-13)
     out["bonfire.open"] = "off";
     const when = String(content["event.postponed_dates"] || "").trim() || POSTPONED_DATES;
     const old = String(content["event.dates"] || "").trim();
@@ -865,10 +865,6 @@ app.post("/api/register", upload.any(), async (req, res) => {
       return f;
     };
     const content = await loadContent();
-    if (isPostponed(content))
-      return res.status(403).json({
-        error: String(content["event.postponed_note"] || "RSIC has been postponed. Registration is closed.").replace(/\*/g, ""),
-      });
     if ((content["registration.open"] || "off").toLowerCase() !== "on") {
       return res.status(403).json({
         error:
