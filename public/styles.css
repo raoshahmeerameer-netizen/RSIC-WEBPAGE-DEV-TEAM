@@ -997,6 +997,12 @@ input[type=file]::file-selector-button{margin-right:12px;padding:7px 12px;border
 .bonfire-layout{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:clamp(20px,3vw,40px);align-items:start}
 .bonfire-poster{display:block;margin:0;border-radius:var(--r-lg);overflow:hidden;box-shadow:0 22px 40px -26px rgba(3,8,20,.95)}
 .bonfire-poster img{display:block;width:100%;height:auto}
+/* Postponed notice (owner, 2026-11-13), added by script.js under the top bar
+   on every page while the dashboard's switch is on. */
+.postponed-bar{background:var(--surface-2,#10264a);border-bottom:1px solid rgba(208,118,143,.45)}
+.postponed-bar p{margin:0 auto;padding-top:12px;padding-bottom:12px;font-size:.98rem;line-height:1.5;color:var(--text)}
+.postponed-bar em,.postponed-in-countdown em{font-style:normal;font-weight:700;color:var(--pink-light,#e7a3b6)}
+.postponed-in-countdown{margin:18px 0 0;font-size:clamp(1.02rem,1.6vw,1.2rem);line-height:1.55;max-width:60ch}
 .bonfire-side .reg-facts{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
 @media (max-width:860px){
   .bonfire-layout{grid-template-columns:1fr}

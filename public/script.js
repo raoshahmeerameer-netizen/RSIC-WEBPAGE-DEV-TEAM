@@ -94,6 +94,8 @@ if (
     const pad = (n) => String(n).padStart(2, "0");
     let started = false;
     const tick = () => {
+      // a postponed event has no countdown; the notice takes its place
+      if (root.classList.contains("postponed")) return;
       let left = Math.max(0, target - Date.now());
       const d = Math.floor(left / 864e5);
       left %= 864e5;
@@ -1262,6 +1264,40 @@ const rsicContentReady = (async () => {
         });
     }
 
+    // Postponed (owner, 2026-11-13): a notice under the top bar on every
+    // page, the countdown swapped for it, and the footer's date line too.
+    // Switching it off in the dashboard brings everything back as it was.
+    if (String(content["event.postponed"] || "").toLowerCase() === "on") {
+      const note =
+        content["event.postponed_note"] ||
+        "*RSIC 2026 has been postponed.* New dates will be announced here.";
+      const title = content["event.postponed_title"] || "RSIC 2026 is *postponed.*";
+      document.documentElement.classList.add("postponed");
+      document.body.classList.remove("rsic-live");
+      const head = document.querySelector(".site-head");
+      if (head && !document.querySelector(".postponed-bar")) {
+        const bar = document.createElement("div");
+        bar.className = "postponed-bar";
+        bar.setAttribute("role", "status");
+        const p = document.createElement("p");
+        p.className = "wrap";
+        rsicSetText(p, note);
+        bar.append(p);
+        head.after(bar);
+      }
+      const label = document.querySelector("[data-countdown-label]");
+      if (label) rsicSetText(label, title);
+      const grid = document.querySelector("[data-countdown]");
+      if (grid && !document.querySelector(".postponed-in-countdown")) {
+        const p = document.createElement("p");
+        p.className = "postponed-in-countdown";
+        rsicSetText(p, note);
+        grid.replaceWith(p);
+      }
+      const foot = document.querySelector(".site-foot p");
+      if (foot) rsicSetText(foot, note);
+    }
+
     const noneNote = document.getElementById("formsNone");
     if (noneNote)
       noneNote.hidden = [...document.querySelectorAll("[data-cms-href]")].some(
@@ -1573,7 +1609,11 @@ if (regForm) {
     isOpen = (content["registration.open"] || "off").toLowerCase() === "on";
     regForm.dataset.open = isOpen ? "yes" : "no";
     if (submitBtn) {
-      submitBtn.textContent = isOpen ? "Register delegation ↗" : "Opens soon";
+      submitBtn.textContent = isOpen
+        ? "Register delegation ↗"
+        : String(content["event.postponed"] || "").toLowerCase() === "on"
+          ? "Postponed"
+          : "Opens soon";
       submitBtn.disabled = !isOpen;
     }
     if (regNote) {

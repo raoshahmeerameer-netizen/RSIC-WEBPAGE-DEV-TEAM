@@ -436,7 +436,11 @@ const detailsOf = (row, content) => {
       email: oneLine(head.email),
       phone: oneLine(head.phone),
     },
-    dates: setting(content, "event.dates", FALLBACK.dates),
+    // while the event is postponed the email shows the postponed line instead
+    dates:
+      String((content && content["event.postponed"]) || "").toLowerCase() === "on"
+        ? setting(content, "event.postponed_dates", "Postponed. New dates to be announced.")
+        : setting(content, "event.dates", FALLBACK.dates),
     venue: setting(content, "event.venue", FALLBACK.venue),
     contact: setting(content, "contact.email", FALLBACK.contact),
     map: safeUrl(setting(content, "event.map_url", FALLBACK.map)),

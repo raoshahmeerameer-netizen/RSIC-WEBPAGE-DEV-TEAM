@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=c5b9bf34c4" />
+    <link rel="stylesheet" href="/styles.css?v=f4ffb3590d" />
 
     <style>
       .admin-wrap {
@@ -499,13 +499,25 @@
       <div class="admin-wrap">
         <!-- the switch -->
                 <nav class="panel-tabs" id="panelTabs" aria-label="Dashboard sections">
-          <button class="panel-tab active" type="button" data-panels="panel-switch panel-realms panel-numbers panel-regs panel-attempts panel-breakdown">Registrations</button>
+          <button class="panel-tab active" type="button" data-panels="panel-status panel-switch panel-realms panel-numbers panel-regs panel-attempts panel-breakdown">Registrations</button>
           <button class="panel-tab" type="button" data-panels="panel-bonfire">Bonfire</button>
           <button class="panel-tab" type="button" data-panels="panel-text">Site text</button>
           <button class="panel-tab" type="button" data-panels="panel-guides">Study guides</button>
           <button class="panel-tab" type="button" data-panels="panel-forms">Event forms</button>
           <button class="panel-tab" type="button" data-panels="panel-logos">Realm logos</button>
         </nav>
+
+<section class="panel" id="panel-status" aria-label="Event status">
+          <h2>Event status</h2>
+          <p class="lede" style="margin-top: 0">
+            Postponing puts a notice on every page, replaces the countdown and
+            the dates with it, and keeps registration and the Bonfire closed
+            until you switch it back. Study guides can be hidden from every
+            realm page and shown again; the files themselves are kept.
+          </p>
+          <div class="realm-switches" id="statusSwitches"></div>
+          <p class="admin-msg" id="statusMsg"></p>
+        </section>
 
 <section class="reg-switchboard panel" id="panel-switch" aria-label="Registration switch">
           <div>
@@ -809,7 +821,7 @@
       </form>
     </div>
 
-    <script src="/script.js?v=05c1c2d21a" defer></script>
+    <script src="/script.js?v=defd6a8e0b" defer></script>
     <script>
       (() => {
         // ---------------------------------------------------------- setup
@@ -850,9 +862,12 @@
           $("regToggle").style.display = "none";
           // the realm switches are the owner's; the server refuses them anyway
           document.querySelectorAll("#panelTabs .panel-tab").forEach((b) => {
-            b.dataset.panels = b.dataset.panels.replace(" panel-realms", "");
+            b.dataset.panels = b.dataset.panels
+              .replace(" panel-realms", "")
+              .replace("panel-status ", "");
           });
           $("panel-realms").hidden = true;
+          $("panel-status").hidden = true;
           ["panel-guides", "panel-forms", "panel-logos"].forEach(
             (id) => ($(id).hidden = true),
           );
@@ -2687,6 +2702,60 @@
           });
         }
 
+        // Event status (owner, 2026-11-13): postponed, and study guides shown
+        // or hidden. [setting, title, default, on-state, off-state, turn on, turn off, confirm on, confirm off]
+        const STATUS_SWITCHES = [
+          ["event.postponed", "The event", "off", "Postponed", "On schedule",
+            "Mark as postponed", "Back on schedule",
+            "Mark RSIC as postponed? Every page shows the notice, and registration and the Bonfire close.",
+            "Put RSIC back on schedule? The notice goes, and the dates and countdown come back. Check the dates are right first."],
+          ["guides.open", "Study guides", "on", "Shown", "Hidden",
+            "Show study guides", "Hide study guides",
+            "Show the study guide buttons on every realm page again?",
+            "Hide the study guide buttons on every realm page?"],
+        ];
+        function paintStatus() {
+          const wrap = $("statusSwitches");
+          if (!wrap || REGI) return;
+          wrap.replaceChildren();
+          STATUS_SWITCHES.forEach(([key, name, def, onTxt, offTxt, turnOn, turnOff, askOn, askOff]) => {
+            const on = (valueOf(key) || def).toLowerCase() === "on";
+            const row = document.createElement("div");
+            row.className = "realm-switch";
+            const left = document.createElement("div");
+            const title = document.createElement("b");
+            title.textContent = name;
+            const pill = document.createElement("span");
+            // postponed is the warning state, so it gets the closed look
+            const good = key === "event.postponed" ? !on : on;
+            pill.className = "switch-state " + (good ? "on" : "off");
+            pill.textContent = on ? onTxt : offTxt;
+            left.append(title, pill);
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "action-btn";
+            btn.textContent = on ? turnOff : turnOn;
+            btn.addEventListener("click", async () => {
+              const next = on ? "off" : "on";
+              if (!confirm(next === "on" ? askOn : askOff)) return;
+              btn.disabled = true;
+              try {
+                await request("/api/content", {
+                  method: "PATCH",
+                  body: JSON.stringify({ updates: { [key]: next } }),
+                });
+                await loadContent();
+                say($("statusMsg"), name + ": " + (next === "on" ? onTxt : offTxt).toLowerCase() + ".", true);
+              } catch (err) {
+                say($("statusMsg"), err.message, false);
+                btn.disabled = false;
+              }
+            });
+            row.append(left, btn);
+            wrap.append(row);
+          });
+        }
+
         $("regToggle").addEventListener("click", async () => {
           const open =
             (valueOf("registration.open") || "off").toLowerCase() === "on";
@@ -2727,6 +2796,7 @@
             renderLogos();
             paintSwitch();
             paintRealms();
+            paintStatus();
             markDirty();
           } catch (err) {
             say($("cmsMsg"), err.message, false);

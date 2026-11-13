@@ -289,7 +289,7 @@ loadContent().catch((err) => console.error("content warm-up:", err.message));
 // Public: every editable string, so the pages can fill themselves in.
 app.get("/api/content", async (_req, res) => {
   try {
-    res.json({ content: withRealmCount(await loadContentFast()) });
+    res.json({ content: withStatus(withRealmCount(await loadContentFast())) });
   } catch (err) {
     console.error("content:", err.message);
     res.status(500).json({ error: "Could not load site content." });
@@ -609,6 +609,42 @@ const countWords = (n) => {
 // heading like "{Realm_count} worlds" stays right whichever realms are on.
 // Stored text can also carry the same <!--realm:key--> markers as the pages,
 // so a sentence naming a realm loses that realm's words while it is off.
+// Event status (owner, 2026-11-13). Two switches set from the dashboard:
+// event.postponed puts the postponed notice everywhere, swaps the dates for
+// it and keeps registration and the Bonfire closed whatever their own
+// switches say; guides.open hides every study guide button. Both only change
+// what is served, so switching back restores the site exactly.
+const isPostponed = (c) =>
+  String((c && c["event.postponed"]) || "off").toLowerCase() === "on";
+const guidesOpen = (c) =>
+  String((c && c["guides.open"]) || "on").toLowerCase() !== "off";
+const POSTPONED_DATES = "Postponed. New dates to be announced.";
+const withStatus = (content) => {
+  const out = { ...content };
+  if (!guidesOpen(content))
+    Object.keys(out).forEach((k) => {
+      if (/^realm\.[a-z]+\.guide$/.test(k)) out[k] = "";
+    });
+  if (isPostponed(content)) {
+    out["registration.open"] = "off";
+    out["bonfire.open"] = "off";
+    const when = String(content["event.postponed_dates"] || "").trim() || POSTPONED_DATES;
+    const old = String(content["event.dates"] || "").trim();
+    // a value that is only the dates (a "When" card) shows the new line
+    if (old) {
+      const bare = old.replace(/\s+\d{4}$/, "");
+      Object.keys(out).forEach((k) => {
+        const v = typeof out[k] === "string" ? out[k].trim() : "";
+        if (v && (v === old || v === bare)) out[k] = when;
+      });
+    }
+    out["event.dates"] = when;
+    if (content["event.postponed_note"])
+      out["registration.closed_note"] = content["event.postponed_note"];
+  }
+  return out;
+};
+
 const withRealmCount = (content) => {
   const on = activeRealms(content);
   const onKeys = new Set(on.map((r) => r[0]));
@@ -829,6 +865,10 @@ app.post("/api/register", upload.any(), async (req, res) => {
       return f;
     };
     const content = await loadContent();
+    if (isPostponed(content))
+      return res.status(403).json({
+        error: String(content["event.postponed_note"] || "RSIC has been postponed. Registration is closed.").replace(/\*/g, ""),
+      });
     if ((content["registration.open"] || "off").toLowerCase() !== "on") {
       return res.status(403).json({
         error:
@@ -1068,7 +1108,7 @@ const numberIn = (s) => {
 app.post("/api/bonfire", async (req, res) => {
   try {
     const content = await loadContent();
-    if ((content["bonfire.open"] || "off").toLowerCase() !== "on")
+    if (isPostponed(content) || (content["bonfire.open"] || "off").toLowerCase() !== "on")
       return res.status(403).json({ error: "Bonfire bookings aren't open." });
     if (
       windowed(bonfireTries, req.ip, true) > 30 ||
